@@ -1294,12 +1294,183 @@
     stroke-linejoin: round;
   }
 
+  /* ---------- CTA Wizard callout ---------- */
+
+  .wizard-callout {
+    max-width: 620px;
+    margin: 28px auto 0;
+    padding: 18px 22px;
+    background: var(--liveask-blue-soft);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+  }
+
+  .wizard-callout-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .wizard-callout-icon {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--liveask-blue);
+  }
+
+  .wizard-callout-icon svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .wizard-callout-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--liveask-blue);
+  }
+
+  .wizard-callout-tagline {
+    margin: 2px 0 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .wizard-callout-body {
+    margin: 10px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--liveask-charcoal);
+  }
+
+  .wizard-example {
+    margin-top: 12px;
+    padding: 14px 16px;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+  }
+
+  .wizard-example-intro {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--liveask-muted);
+  }
+
+  .wizard-example-intro + .wizard-example-item,
+  .wizard-example-item + .wizard-example-intro {
+    margin-top: 10px;
+  }
+
+  .wizard-example-intro + .wizard-example-intro,
+  .wizard-example-intro + .wizard-example-quote {
+    margin-top: 8px;
+  }
+
+  .wizard-example-item {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--liveask-blue-soft);
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .wizard-example-quote {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  /* ============================================================
+     LIVEASK CONTEXTUAL ASK BUTTON — reusable component
+     Canonical markup/CSS pattern from the supplied prototype
+     (liveask-contextual-ask-button_2.html). SVG artwork/geometry
+     is untouched; size is controlled by ONE custom property,
+     width auto-scales from the viewBox so it never needs setting.
+     Inert here (no data-prompt/click wiring) — same "looks real,
+     does nothing yet" convention as the sibling starter-chip
+     buttons above, since this section is illustrative only.
+     ============================================================ */
+
+  .liveask-ask-btn {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    line-height: 0;
+    border-radius: 999px;
+    transition: transform 0.12s ease;
+    vertical-align: middle;
+    --liveask-icon-size: 34px;
+  }
+
+  .liveask-ask-btn .liveask-icon-svg {
+    height: var(--liveask-icon-size);
+    width: auto;
+    display: block;
+  }
+
+  .liveask-ask-btn:hover { transform: translateY(-1px); }
+  .liveask-ask-btn:hover .liveask-icon-svg .pill {
+    stroke: var(--liveask-blue);
+    filter: drop-shadow(0 2px 6px rgba(0, 95, 174, 0.18));
+  }
+  .liveask-ask-btn:active { transform: translateY(0); }
+  .liveask-ask-btn:focus-visible {
+    outline: 2px solid var(--liveask-blue);
+    outline-offset: 3px;
+  }
+
+  /* Context-specific sizing — inline mid-sentence uses vs. the
+     larger contextual QuickStart example row. */
+  .wizard-callout-body .liveask-ask-btn,
+  .wizard-example-intro .liveask-ask-btn {
+    --liveask-icon-size: 20px;
+    margin: 0 1px -5px;
+  }
+
+  .wizard-example-item .liveask-ask-btn {
+    --liveask-icon-size: 34px;
+  }
+
+  .wizard-callout-closing {
+    margin: 10px 0 0;
+    font-size: 12px;
+    font-style: italic;
+    color: var(--liveask-muted);
+  }
+
   @media (max-width: 720px) {
     .starters-section { padding: 40px 0 44px; }
     .starters-heading { font-size: 23px; }
     .starters-sub { font-size: 14px; }
     .starters-list { margin-top: 22px; grid-template-columns: minmax(0, 1fr); }
     .starter-chip { width: 100%; font-size: 13.5px; padding: 12px 16px; }
+    .wizard-callout { padding: 16px 16px; margin-top: 22px; }
   }
 
   /* ============================================================
@@ -2134,6 +2305,11 @@
       <symbol id="ic-starter-arrow" viewBox="0 0 24 24">
         <path d="M5 12h13M13 6l6 6-6 6"/>
       </symbol>
+      <symbol id="ic-wizard" viewBox="0 0 24 24">
+        <path d="M4 20l7-7"/>
+        <path d="M13 5l1.5 3L18 9.5 15 11l-1.5 3L12 11 9 9.5 12 8z"/>
+        <path d="M17 3.5l.7 1.5 1.5.7-1.5.7-.7 1.5-.7-1.5-1.5-.7 1.5-.7z"/>
+      </symbol>
     </svg>
 
     <h2 class="starters-heading">What could LiveAsk do for your business?</h2>
@@ -2156,6 +2332,252 @@
         What does it take to add LiveAsk to a website?
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-starter-arrow"/></svg>
       </button>
+    </div>
+
+    <div class="wizard-callout">
+      <div class="wizard-callout-header">
+        <span class="wizard-callout-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-wizard"/></svg></span>
+        <div>
+          <p class="wizard-callout-title">LiveAsk CTA Wizard</p>
+          <p class="wizard-callout-tagline">Find the moments where visitors need a conversation.</p>
+        </div>
+      </div>
+      <p class="wizard-callout-body">LiveAsk can analyse your website and identify places where visitors are likely to have a question &mdash; then recommend a contextual <button type="button" class="liveask-ask-btn" aria-label="Ask LiveAsk"><svg class="liveask-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190.62 88.62" width="191" height="89" role="img" aria-hidden="true">
+  <style>
+    .liveask-icon-svg .pill { fill:#FFFFFF; stroke:#E1E4E8; stroke-width:1.2; transition: stroke .15s ease, filter .15s ease; }
+    .liveask-icon-svg .bubble { fill:#005FAE; }
+    .liveask-icon-svg .qmark { fill:#FFFFFF; font-family:Arial, Helvetica, sans-serif; font-weight:700; }
+    .liveask-icon-svg .st0{fill:#005FAE;}
+    .liveask-icon-svg .st4{fill:#005FAE;stroke:#005FAE;stroke-width:0.6658;stroke-miterlimit:10;}
+    .liveask-icon-svg .st5{fill:#005FAE;stroke:#005FAE;stroke-width:0.6658;stroke-linecap:round;stroke-miterlimit:10;}
+    .liveask-icon-svg .st1{fill:none;stroke:#48484A;stroke-width:1.6364;stroke-miterlimit:10;}
+
+    /* Cursor blink — synced to the existing LiveAsk.gif: 750ms on / 750ms off, 1.5s cycle */
+    .liveask-icon-svg .liveask-cursor-bar {
+      animation: liveask-cursor-blink 1.5s steps(1) infinite;
+    }
+    @keyframes liveask-cursor-blink {
+      0%   { opacity: 1; }
+      49%  { opacity: 1; }
+      50%  { opacity: 0; }
+      99%  { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .liveask-icon-svg .liveask-cursor-bar { animation: none; opacity: 1; }
+    }
+  </style>
+
+  <rect class="pill" x="0.6" y="0.6" width="189.43" height="87.42" rx="43.71" ry="43.71"/>
+
+  <g>
+    <circle class="bubble" cx="34.00" cy="44.31" r="22.00"/>
+    <path class="bubble" d="M 20.36 57.95
+             L 13.10 69.61
+             L 30.04 61.47 Z"/>
+    <text class="qmark" x="34.00" y="52.23" font-size="27.50" text-anchor="middle">?</text>
+  </g>
+
+  <g transform="translate(-28.12,9.12)">
+<g>
+	<g>
+		<g>
+			
+				<rect x="180.49" y="17.25" transform="matrix(4.490636e-11 -1 1 4.490636e-11 168.2505 204.4377)" class="st0" width="11.71" height="1.69"/>
+			<rect x="175.48" y="12.24" class="st0" width="11.71" height="1.69"/>
+		</g>
+		<g>
+			
+				<rect x="180.49" y="51.38" transform="matrix(4.490612e-11 1 -1 4.490612e-11 238.5678 -134.1203)" class="st0" width="11.71" height="1.69"/>
+			<rect x="175.48" y="56.39" class="st0" width="11.71" height="1.69"/>
+		</g>
+	</g>
+	<line class="st1 liveask-cursor-bar" x1="195.89" y1="2.94" x2="195.89" y2="67.42"/>
+	<g>
+		<g class="st2">
+			<path class="st4" d="M94.68,53.63l13.4-36.58h4.12l13.53,36.58h-3.68l-8.69-23.91c-0.49-1.33-1.03-2.88-1.61-4.65
+				c-0.58-1.78-1.25-3.92-2-6.42h0.74c-0.75,2.52-1.42,4.68-2.01,6.48c-0.59,1.8-1.1,3.33-1.55,4.59l-8.54,23.91H94.68z
+				 M100.91,42.76v-3.09h18.58v3.09H100.91z"/>
+			<path class="st4" d="M140.07,54.22c-1.8,0-3.4-0.27-4.79-0.82c-1.39-0.55-2.54-1.35-3.44-2.41c-0.9-1.06-1.51-2.35-1.84-3.89
+				l3.19-0.76c0.39,1.65,1.17,2.88,2.34,3.69c1.17,0.81,2.66,1.21,4.48,1.21c2.08,0,3.74-0.47,5-1.4c1.25-0.93,1.88-2.09,1.88-3.49
+				c0-1.11-0.37-2.04-1.12-2.77c-0.74-0.74-1.86-1.28-3.35-1.64l-4.47-1.08c-2.36-0.57-4.12-1.47-5.29-2.69
+				c-1.17-1.22-1.76-2.75-1.76-4.6c0-1.54,0.41-2.89,1.24-4.05c0.83-1.16,1.96-2.07,3.41-2.72c1.45-0.65,3.1-0.98,4.95-0.98
+				c1.73,0,3.22,0.27,4.47,0.8c1.24,0.53,2.27,1.28,3.08,2.25c0.81,0.97,1.42,2.11,1.83,3.44l-3.04,0.79
+				c-0.43-1.26-1.13-2.3-2.12-3.13c-0.99-0.83-2.39-1.24-4.19-1.24c-1.82,0-3.31,0.43-4.49,1.3c-1.18,0.87-1.77,1.99-1.77,3.36
+				c0,1.16,0.4,2.11,1.19,2.85c0.79,0.74,2.03,1.31,3.72,1.72l4.2,1.01c2.32,0.57,4.06,1.46,5.22,2.68
+				c1.15,1.21,1.73,2.72,1.73,4.54c0,1.57-0.43,2.96-1.3,4.17c-0.87,1.21-2.07,2.16-3.62,2.85
+				C143.86,53.88,142.08,54.22,140.07,54.22z"/>
+		</g>
+		<g>
+			<g>
+				<path class="st5" d="M157.91,53.63V17.06h3.49v12.69L161.35,38l0.05,1.79v13.85H157.91z M160.39,42.27l-0.12-3.71
+					c0.88-1.11,1.75-2.18,2.6-3.2c0.85-1.02,1.71-2.03,2.59-3.03c0.88-1,1.78-2,2.71-2.99l15.24-16.01l3.08,1.13l-17.8,19.17
+					l-0.25,0.07L160.39,42.27z M182.75,57.05l-16.39-22.59l2.23-2.63l17.86,25.1L182.75,57.05z"/>
+			</g>
+		</g>
+	</g>
+</g>
+  </g>
+</svg></button> QuickStart right there.</p>
+      <div class="wizard-example">
+        <p class="wizard-example-intro">Imagine this on a financial adviser&rsquo;s website:</p>
+        <p class="wizard-example-item">Self-Managed Super Funds <button type="button" class="liveask-ask-btn" aria-label="Ask LiveAsk"><svg class="liveask-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190.62 88.62" width="191" height="89" role="img" aria-hidden="true">
+  <style>
+    .liveask-icon-svg .pill { fill:#FFFFFF; stroke:#E1E4E8; stroke-width:1.2; transition: stroke .15s ease, filter .15s ease; }
+    .liveask-icon-svg .bubble { fill:#005FAE; }
+    .liveask-icon-svg .qmark { fill:#FFFFFF; font-family:Arial, Helvetica, sans-serif; font-weight:700; }
+    .liveask-icon-svg .st0{fill:#005FAE;}
+    .liveask-icon-svg .st4{fill:#005FAE;stroke:#005FAE;stroke-width:0.6658;stroke-miterlimit:10;}
+    .liveask-icon-svg .st5{fill:#005FAE;stroke:#005FAE;stroke-width:0.6658;stroke-linecap:round;stroke-miterlimit:10;}
+    .liveask-icon-svg .st1{fill:none;stroke:#48484A;stroke-width:1.6364;stroke-miterlimit:10;}
+
+    /* Cursor blink — synced to the existing LiveAsk.gif: 750ms on / 750ms off, 1.5s cycle */
+    .liveask-icon-svg .liveask-cursor-bar {
+      animation: liveask-cursor-blink 1.5s steps(1) infinite;
+    }
+    @keyframes liveask-cursor-blink {
+      0%   { opacity: 1; }
+      49%  { opacity: 1; }
+      50%  { opacity: 0; }
+      99%  { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .liveask-icon-svg .liveask-cursor-bar { animation: none; opacity: 1; }
+    }
+  </style>
+
+  <rect class="pill" x="0.6" y="0.6" width="189.43" height="87.42" rx="43.71" ry="43.71"/>
+
+  <g>
+    <circle class="bubble" cx="34.00" cy="44.31" r="22.00"/>
+    <path class="bubble" d="M 20.36 57.95
+             L 13.10 69.61
+             L 30.04 61.47 Z"/>
+    <text class="qmark" x="34.00" y="52.23" font-size="27.50" text-anchor="middle">?</text>
+  </g>
+
+  <g transform="translate(-28.12,9.12)">
+<g>
+	<g>
+		<g>
+			
+				<rect x="180.49" y="17.25" transform="matrix(4.490636e-11 -1 1 4.490636e-11 168.2505 204.4377)" class="st0" width="11.71" height="1.69"/>
+			<rect x="175.48" y="12.24" class="st0" width="11.71" height="1.69"/>
+		</g>
+		<g>
+			
+				<rect x="180.49" y="51.38" transform="matrix(4.490612e-11 1 -1 4.490612e-11 238.5678 -134.1203)" class="st0" width="11.71" height="1.69"/>
+			<rect x="175.48" y="56.39" class="st0" width="11.71" height="1.69"/>
+		</g>
+	</g>
+	<line class="st1 liveask-cursor-bar" x1="195.89" y1="2.94" x2="195.89" y2="67.42"/>
+	<g>
+		<g class="st2">
+			<path class="st4" d="M94.68,53.63l13.4-36.58h4.12l13.53,36.58h-3.68l-8.69-23.91c-0.49-1.33-1.03-2.88-1.61-4.65
+				c-0.58-1.78-1.25-3.92-2-6.42h0.74c-0.75,2.52-1.42,4.68-2.01,6.48c-0.59,1.8-1.1,3.33-1.55,4.59l-8.54,23.91H94.68z
+				 M100.91,42.76v-3.09h18.58v3.09H100.91z"/>
+			<path class="st4" d="M140.07,54.22c-1.8,0-3.4-0.27-4.79-0.82c-1.39-0.55-2.54-1.35-3.44-2.41c-0.9-1.06-1.51-2.35-1.84-3.89
+				l3.19-0.76c0.39,1.65,1.17,2.88,2.34,3.69c1.17,0.81,2.66,1.21,4.48,1.21c2.08,0,3.74-0.47,5-1.4c1.25-0.93,1.88-2.09,1.88-3.49
+				c0-1.11-0.37-2.04-1.12-2.77c-0.74-0.74-1.86-1.28-3.35-1.64l-4.47-1.08c-2.36-0.57-4.12-1.47-5.29-2.69
+				c-1.17-1.22-1.76-2.75-1.76-4.6c0-1.54,0.41-2.89,1.24-4.05c0.83-1.16,1.96-2.07,3.41-2.72c1.45-0.65,3.1-0.98,4.95-0.98
+				c1.73,0,3.22,0.27,4.47,0.8c1.24,0.53,2.27,1.28,3.08,2.25c0.81,0.97,1.42,2.11,1.83,3.44l-3.04,0.79
+				c-0.43-1.26-1.13-2.3-2.12-3.13c-0.99-0.83-2.39-1.24-4.19-1.24c-1.82,0-3.31,0.43-4.49,1.3c-1.18,0.87-1.77,1.99-1.77,3.36
+				c0,1.16,0.4,2.11,1.19,2.85c0.79,0.74,2.03,1.31,3.72,1.72l4.2,1.01c2.32,0.57,4.06,1.46,5.22,2.68
+				c1.15,1.21,1.73,2.72,1.73,4.54c0,1.57-0.43,2.96-1.3,4.17c-0.87,1.21-2.07,2.16-3.62,2.85
+				C143.86,53.88,142.08,54.22,140.07,54.22z"/>
+		</g>
+		<g>
+			<g>
+				<path class="st5" d="M157.91,53.63V17.06h3.49v12.69L161.35,38l0.05,1.79v13.85H157.91z M160.39,42.27l-0.12-3.71
+					c0.88-1.11,1.75-2.18,2.6-3.2c0.85-1.02,1.71-2.03,2.59-3.03c0.88-1,1.78-2,2.71-2.99l15.24-16.01l3.08,1.13l-17.8,19.17
+					l-0.25,0.07L160.39,42.27z M182.75,57.05l-16.39-22.59l2.23-2.63l17.86,25.1L182.75,57.05z"/>
+			</g>
+		</g>
+	</g>
+</g>
+  </g>
+</svg></button></p>
+        <p class="wizard-example-intro">The visitor taps <button type="button" class="liveask-ask-btn" aria-label="Ask LiveAsk"><svg class="liveask-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190.62 88.62" width="191" height="89" role="img" aria-hidden="true">
+  <style>
+    .liveask-icon-svg .pill { fill:#FFFFFF; stroke:#E1E4E8; stroke-width:1.2; transition: stroke .15s ease, filter .15s ease; }
+    .liveask-icon-svg .bubble { fill:#005FAE; }
+    .liveask-icon-svg .qmark { fill:#FFFFFF; font-family:Arial, Helvetica, sans-serif; font-weight:700; }
+    .liveask-icon-svg .st0{fill:#005FAE;}
+    .liveask-icon-svg .st4{fill:#005FAE;stroke:#005FAE;stroke-width:0.6658;stroke-miterlimit:10;}
+    .liveask-icon-svg .st5{fill:#005FAE;stroke:#005FAE;stroke-width:0.6658;stroke-linecap:round;stroke-miterlimit:10;}
+    .liveask-icon-svg .st1{fill:none;stroke:#48484A;stroke-width:1.6364;stroke-miterlimit:10;}
+
+    /* Cursor blink — synced to the existing LiveAsk.gif: 750ms on / 750ms off, 1.5s cycle */
+    .liveask-icon-svg .liveask-cursor-bar {
+      animation: liveask-cursor-blink 1.5s steps(1) infinite;
+    }
+    @keyframes liveask-cursor-blink {
+      0%   { opacity: 1; }
+      49%  { opacity: 1; }
+      50%  { opacity: 0; }
+      99%  { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .liveask-icon-svg .liveask-cursor-bar { animation: none; opacity: 1; }
+    }
+  </style>
+
+  <rect class="pill" x="0.6" y="0.6" width="189.43" height="87.42" rx="43.71" ry="43.71"/>
+
+  <g>
+    <circle class="bubble" cx="34.00" cy="44.31" r="22.00"/>
+    <path class="bubble" d="M 20.36 57.95
+             L 13.10 69.61
+             L 30.04 61.47 Z"/>
+    <text class="qmark" x="34.00" y="52.23" font-size="27.50" text-anchor="middle">?</text>
+  </g>
+
+  <g transform="translate(-28.12,9.12)">
+<g>
+	<g>
+		<g>
+			
+				<rect x="180.49" y="17.25" transform="matrix(4.490636e-11 -1 1 4.490636e-11 168.2505 204.4377)" class="st0" width="11.71" height="1.69"/>
+			<rect x="175.48" y="12.24" class="st0" width="11.71" height="1.69"/>
+		</g>
+		<g>
+			
+				<rect x="180.49" y="51.38" transform="matrix(4.490612e-11 1 -1 4.490612e-11 238.5678 -134.1203)" class="st0" width="11.71" height="1.69"/>
+			<rect x="175.48" y="56.39" class="st0" width="11.71" height="1.69"/>
+		</g>
+	</g>
+	<line class="st1 liveask-cursor-bar" x1="195.89" y1="2.94" x2="195.89" y2="67.42"/>
+	<g>
+		<g class="st2">
+			<path class="st4" d="M94.68,53.63l13.4-36.58h4.12l13.53,36.58h-3.68l-8.69-23.91c-0.49-1.33-1.03-2.88-1.61-4.65
+				c-0.58-1.78-1.25-3.92-2-6.42h0.74c-0.75,2.52-1.42,4.68-2.01,6.48c-0.59,1.8-1.1,3.33-1.55,4.59l-8.54,23.91H94.68z
+				 M100.91,42.76v-3.09h18.58v3.09H100.91z"/>
+			<path class="st4" d="M140.07,54.22c-1.8,0-3.4-0.27-4.79-0.82c-1.39-0.55-2.54-1.35-3.44-2.41c-0.9-1.06-1.51-2.35-1.84-3.89
+				l3.19-0.76c0.39,1.65,1.17,2.88,2.34,3.69c1.17,0.81,2.66,1.21,4.48,1.21c2.08,0,3.74-0.47,5-1.4c1.25-0.93,1.88-2.09,1.88-3.49
+				c0-1.11-0.37-2.04-1.12-2.77c-0.74-0.74-1.86-1.28-3.35-1.64l-4.47-1.08c-2.36-0.57-4.12-1.47-5.29-2.69
+				c-1.17-1.22-1.76-2.75-1.76-4.6c0-1.54,0.41-2.89,1.24-4.05c0.83-1.16,1.96-2.07,3.41-2.72c1.45-0.65,3.1-0.98,4.95-0.98
+				c1.73,0,3.22,0.27,4.47,0.8c1.24,0.53,2.27,1.28,3.08,2.25c0.81,0.97,1.42,2.11,1.83,3.44l-3.04,0.79
+				c-0.43-1.26-1.13-2.3-2.12-3.13c-0.99-0.83-2.39-1.24-4.19-1.24c-1.82,0-3.31,0.43-4.49,1.3c-1.18,0.87-1.77,1.99-1.77,3.36
+				c0,1.16,0.4,2.11,1.19,2.85c0.79,0.74,2.03,1.31,3.72,1.72l4.2,1.01c2.32,0.57,4.06,1.46,5.22,2.68
+				c1.15,1.21,1.73,2.72,1.73,4.54c0,1.57-0.43,2.96-1.3,4.17c-0.87,1.21-2.07,2.16-3.62,2.85
+				C143.86,53.88,142.08,54.22,140.07,54.22z"/>
+		</g>
+		<g>
+			<g>
+				<path class="st5" d="M157.91,53.63V17.06h3.49v12.69L161.35,38l0.05,1.79v13.85H157.91z M160.39,42.27l-0.12-3.71
+					c0.88-1.11,1.75-2.18,2.6-3.2c0.85-1.02,1.71-2.03,2.59-3.03c0.88-1,1.78-2,2.71-2.99l15.24-16.01l3.08,1.13l-17.8,19.17
+					l-0.25,0.07L160.39,42.27z M182.75,57.05l-16.39-22.59l2.23-2.63l17.86,25.1L182.75,57.05z"/>
+			</g>
+		</g>
+	</g>
+</g>
+  </g>
+</svg></button> and LiveAsk already knows what they&rsquo;re looking at:</p>
+        <p class="wizard-example-quote">&ldquo;What&rsquo;s a self-managed super fund &mdash; and who are they usually suitable for?&rdquo;</p>
+      </div>
+      <p class="wizard-callout-closing">No searching. No navigating. Just ask about what&rsquo;s in front of you.</p>
     </div>
 
   </div>
