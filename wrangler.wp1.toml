@@ -1,0 +1,10 @@
+name = "liveask-wp1-realtime-spike"
+main = "wp1-realtime-worker.js"
+compatibility_date = "2026-09-02"
+
+# WP1 ONLY. Do not reuse as production Voice configuration.
+# Required secret:
+#   npx wrangler secret put OPENAI_API_KEY --config wrangler.wp1.toml
+#
+# Deploy:
+#   npx wrangler deploy --config wrangler.wp1.toml
