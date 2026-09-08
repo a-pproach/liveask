@@ -1,0 +1,606 @@
+/* ============================================================
+   LiveAsk Platform — widget.css
+   Stage A extraction, 30 August 2026.
+
+   Source: the .ask-* rules embedded in the established reference pages,
+   liveask-index.html and ai-tips-index.html (confirmed byte-identical
+   between the latter two; one drift found and resolved — see the
+   .ask-fake-placeholder--final rule below), plus every custom property
+   and global-reset dependency those rules relied on without declaring
+   locally, traced and made explicit here per the Coupling Audit.
+
+   This file is the single, authoritative, customer-independent source
+   for LiveAsk panel presentation. No customer page CSS is required for
+   any of this to render correctly.
+   ============================================================ */
+
+/* ---- Design tokens ----
+   All 13 custom properties confirmed to be the exact, byte-identical
+   subset every .ask-* rule actually depends on (traced directly against
+   all three source pages' :root blocks — the legacy reference page defines
+   4 additional variables that are not used by the panel,
+   --product-font, confirmed unused by any panel rule and correctly
+   excluded here). Scoped to :host so they're available throughout this
+   shadow tree without depending on anything the host page defines. */
+:host {
+  --paper: #FAFAF7;
+  --ink: #1D2A3A;
+  --ink-soft: #4A5A6E;
+  --navy: #0E1B2C;
+  --line: #DCE0E4;
+  --logo-blue: #005FAE;
+  --logo-blue-deep: #00457F;
+  --maroon: #7E1F32;
+  --danger: #B3261E;
+  --danger-deep: #8C1D16;
+  --amber: #E8A13D;
+  --body: 'LiveAsk Body', sans-serif;
+  --mono: 'LiveAsk Mono', monospace;
+
+  /* 1 September 2026 — universal animated-logo cursor-sync capability
+     (see the standalone .liveask-brand-cursor block further down this
+     file for the full mechanism and contract). -1px is the canonical,
+     fixed LiveAsk branded-overlay alignment — not exposed here as an
+     invitation to vary it per deployment. If a genuinely different
+     customer asset ever requires a different geometric offset, that
+     gets introduced deliberately at configuration level at that time;
+     it is not part of the core product contract in advance of any
+     actual need. */
+  --liveask-brand-cursor-offset: -1px;
+
+  /* Explicit baseline reset for the shadow tree's own root. Shadow DOM
+     blocks host-page selectors from reaching in, but inherited
+     properties (font-family, color, line-height, etc.) still flow in
+     from the shadow host's own computed style unless reset here — this
+     is that reset. Without it, a host page with an unusual base
+     font-size/color/line-height on body would bleed into panel text
+     via ordinary CSS inheritance even though selector-based bleed is
+     already blocked by the shadow boundary itself. */
+  all: initial;
+  display: block;
+  font-family: var(--body);
+  color: var(--ink);
+  line-height: 1.6;
+  font-size: 17px;
+}
+
+/* ---- Self-hosted fonts ----
+   Exact traced subset only: Barlow at 400 (body default)/600/700, and
+   IBM Plex Mono at 500 (its only weight used anywhere in the panel).
+   Served from LiveAsk's own origin — not Google Fonts — so font loading
+   is part of the same single "trust this LiveAsk domain" request already
+   required for the script/CSS, not a third external dependency a
+   restrictive customer CSP would need a separate allowance for. */
+@font-face {
+  font-family: 'LiveAsk Body';
+  src: url('fonts/barlow-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LiveAsk Body';
+  src: url('fonts/barlow-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LiveAsk Body';
+  src: url('fonts/barlow-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LiveAsk Mono';
+  src: url('fonts/ibm-plex-mono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---- Local reset for this shadow tree ----
+   The host pages' panel rules relied on a page-wide `*{box-sizing:
+   border-box}` reset that several rules below (.ask-popover-item,
+   .ask-popover-tourrow, .ask-popover-navrow, and others combining
+   width:100% with padding) never declared locally. box-sizing is not
+   an inherited property, so it will not cross the shadow boundary on
+   its own — made explicit and local here instead of relied upon
+   implicitly, exactly as flagged during extraction. */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================================
+   Ask panel — structure, byte-identical across all three original
+   source pages except where noted.
+   ============================================================ */
+.ask-panel{padding:10px 0;background:var(--paper);position:sticky;top:0;z-index:50;border-bottom:1px solid transparent;transition:border-color .2s}
+.ask-panel.pinned{border-bottom-color:var(--ink-soft)}
+.ask-box{width:100%;margin:0 auto;position:relative;display:flex;flex-direction:column;gap:2px}
+/* Floating X fully removed (31 August 2026, Conversation Panel
+   redesign) — replaced by the .ask-footer-hide "Hide Chat ⌃" control
+   below, per spec. The button element itself is removed from
+   buildPanelDom() and its handler removed from runtime.js, not just
+   hidden here — "remove" should mean genuinely gone, not an inert
+   element left sitting in the DOM. This rule is kept only as a safety
+   net in case any stale cached copy of the old markup is ever served
+   alongside a new stylesheet during a rollout window. */
+.ask-close-btn{display:none}
+
+/* .ask-output-panel restructuring, 1 September 2026 correction: the
+   border/background/shadow that used to live directly on .ask-thread
+   move to this new outer wrapper, which now also holds the footer as
+   a sibling of #askThread — the footer belongs inside the chat output
+   panel itself, not as a separate box sitting between it and the UIP.
+   Visibility is derived from #askThread's own existing .active class
+   via :has() (the same pattern already used for the placeholder fade
+   above) rather than touching the dozens of call sites that already
+   correctly toggle thread.classList.add('active') — this panel simply
+   shows whenever its own thread child is active, no new call sites
+   needed anywhere. */
+.ask-output-panel{display:none}
+.ask-output-panel:has(.ask-thread.active){display:flex;flex-direction:column;position:relative;background:#fff;border:1px solid var(--line);border-radius:0;box-shadow:0 2px 0 rgba(29,42,58,.05)}
+.ask-thread{display:none;position:relative;padding:18px 20px;max-height:320px;overflow-y:auto}
+.ask-thread.active{display:block}
+
+.ask-uip{background:#fff;border:1px solid var(--line);border-radius:28px;box-shadow:0 2px 0 rgba(29,42,58,.05);display:flex;flex-direction:column}
+/* ============================================================
+   Composer geometry. Row padding restored to the known-good
+   accepted reference value (1 September 2026) — the 30/31 August
+   passes had changed this specific property to an invented, asymmetric
+   16px/6px split purely to hit the UIP brief's approximate ≈96px
+   height target, which silently broke the caret's vertical alignment
+   against the absolutely-positioned, centered placeholder/logo: with
+   symmetric original padding, the flex-end-anchored textarea's single
+   line of content and the centered placeholder/logo happened to align;
+   shrinking only the bottom padding shifted the row's own centre point
+   without the textarea moving to match, since it isn't part of the
+   same absolute-centering system. Restored to the original padding
+   here — align-items:flex-end itself was never the problem and was
+   never changed. The resulting total height is a secondary consequence
+   of getting this right, not a target being solved for:
+     14px (Row 1 top padding, restored)
+   + 20.24px (line-height: 18.4px x 1.1)
+   + 14px (Row 1 bottom padding, restored — this alone is what
+           separates Row 1 from Row 2 now; no separate invented
+           "gap" value is needed once this is symmetric)
+   + 42px (Row 2 control zone)
+   + 12px (Row 2's own bottom padding)
+   = 102.24px.
+   ============================================================ */
+.ask-input-row{position:relative;display:flex;align-items:flex-end;gap:6px;padding:14px 16px}
+/* Typed text — UIP refinement: 16px/450/#1f2937/1.35, replacing the
+   previous 19.55px/var(--ink)/1.1. Must read with more authority than
+   placeholder text, not grey and apologetic. 16 x 1.35 = 21.6px line
+   height — consistent with the geometry section's separately-stated
+   ≈22px Row 1 text line-height target, not a second, conflicting value. */
+/* ============================================================
+   CURSOR LOCK — non-negotiable visual contract, 31 August 2026.
+   Founder-verified in Chrome against the known-good reference
+   reference. Do not "improve" these values independently — they are
+   a visual regression reference, not incidental typography.
+
+   The 30 August pass reverted only line-height and left font-size at
+   16px/weight 450, on the assumption that the tight ratio alone would
+   restore the native caret's overflow. That assumption was wrong —
+   the caret was confirmed visibly shorter than reference even with
+   line-height corrected, because native caret height depends on
+   font-size too, not line-height alone. Corrected here:
+     font-family: Barlow / var(--body)
+     font-size:   18.4px  (this is genuinely 1.15rem at the reference's
+                  real 16px html root — the earlier Stage A rem-to-px
+                  conversion used 17px, taken from the page's body
+                  font-size; rem resolves against html specifically,
+                  never body, so that was the wrong anchor. Flagged
+                  here since it's likely relevant to other converted
+                  values in this file, but NOT corrected beyond this
+                  Founder-verified property — that's a broader
+                  re-audit outside this bounded correction's scope.)
+     font-weight: 400
+     line-height: 1.1 (computed 20.24px at 18.4px — matches the
+                  Founder-verified reference figure exactly)
+     padding:     8px top / 8px bottom / 85px left reserve (unchanged,
+                  already correct)
+     caret-color: #1f2937 (unchanged — confirmed against the actual
+                  Founder-reviewed reference file; this property was
+                  never part of the regression, only font-size/weight)
+   Color (#1f2937) and weight-independent styling stay at their UIP
+   values throughout — this lock is scoped to the caret-driving
+   metrics specifically, not a full typography revert.
+
+   Separately, and NOT to be confused with the above: a legacy
+   animated-logo treatment elsewhere uses LiveAsk.gif (750ms/frame,
+   cursor baked in) plus a synchronised CSS overlay cursor
+   (1.5s steps(1) infinite = 750ms visible + 750ms hidden,
+   margin-left:-1px alignment). That is a different mechanism for a
+   different presentation and must never be added to this textarea.
+   ============================================================ */
+.ask-input-row textarea{flex:1;border:none;outline:none;font-family:var(--body);font-size:18.4px;font-weight:400;color:#1f2937;caret-color:#1f2937;background:transparent;position:relative;z-index:2;resize:none;max-height:6.6em;line-height:1.1;padding:8px 0 8px 85px;overflow-y:auto;transition:padding-left .6s ease}
+.ask-input-row:has(#askPlaceholder.fade) textarea{padding-left:0}
+/* Placeholder matched to the same 16px size as typed text — deliberately
+   NOT smaller — so switching between placeholder and typed content never
+   causes a visible size jump. "May remain softer" (per the brief) is
+   implemented as color/weight only, not size: --ink-soft, no explicit
+   font-weight override (inherits the textarea's sibling default). */
+/* Placeholder — line-height reverted to 1.1 alongside the textarea (30
+   August 2026 caret correction), so the two states share identical
+   vertical rhythm and swapping between them via opacity never causes a
+   visible jump. Font-size (16px) and the "softer via color, not size"
+   choice from the UIP pass both stay unchanged — neither was in
+   conflict. */
+.ask-fake-placeholder{position:absolute;left:115px;top:50%;transform:translateY(-50%) translateZ(0);will-change:contents;font-family:var(--body);font-size:18.4px;color:var(--ink-soft);pointer-events:none;transition:opacity .6s ease;z-index:1;max-width:calc(100% - 131px);line-height:1.1;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.ask-fake-placeholder.fade{opacity:0}
+/* Drift resolved: source pages disagreed here (index.html: nowrap;
+   liveask/ai-tips: normal). liveask-index.html and ai-tips-index.html
+   were byte-identical to each other everywhere else in this ruleset,
+   making them 2-vs-1 for `normal` — taken as the intended value. Worth
+   a deliberate look, not a silent pick — flagged in the Stage A report. */
+/* .ask-fake-placeholder--final removed (1 September 2026 correction)
+   — no code path applies this class any more; setFinalPlaceholder()
+   now uses the same base .ask-fake-placeholder styling as every other
+   placeholder state, since the text it shows is short enough not to
+   need special right-aligned/multi-line treatment. The historical note
+   in this file's header comment about this rule documents the original
+   Stage A extraction and is left as-is. */
+.ask-liveask-inline{position:absolute;left:16px;top:50%;transform:translateY(-50%);height:20px;width:auto;z-index:2;pointer-events:none;transition:opacity .6s ease}
+.ask-input-row:has(#askPlaceholder.fade) .ask-liveask-inline{opacity:0}
+
+/* ============================================================
+   UNIVERSAL animated-logo cursor-sync capability, 1 September 2026.
+
+   Deliberately NOT part of the CURSOR_LOCK contract above, and
+   deliberately NOT wired into the UIP textarea anywhere in this file —
+   that instruction stands unchanged. This is a separate, generic
+   Platform capability for a different presentation entirely: a
+   customer's own branded animated-logo GIF, used elsewhere on their
+   site (a header, a hero section — wherever a customer places their
+   brand mark), where the GIF has a blinking cursor baked directly into
+   its own frames.
+
+   No specific customer's actual logo asset is included here, on
+   purpose — the goal is a universally deployable capability, not a
+   one-site implementation to redo later. The first real deployment of
+   this exact mechanism is expected to be on the LiveAsk.au site itself,
+   using LiveAsk's own branded GIF, once that asset is supplied.
+
+   THE MECHANISM AND CONTRACT for whoever wires up the actual asset:
+   - The GIF's own baked-in cursor blink must run at a fixed, known
+     per-frame duration (confirmed reference value: 750ms/frame).
+   - Layer a static "cursor off" variant of the same logo underneath
+     the GIF-driven visual (so the GIF's own frames never show its own
+     cursor at all — the cursor is drawn entirely by the CSS below,
+     layered on top, so its timing can be controlled independently of
+     the GIF's own frame timing and kept synchronized with it).
+   - Apply .liveask-brand-cursor to that CSS-drawn cursor element. The
+     animation below produces exactly 750ms visible / 750ms hidden, a
+     hard on/off cut (not a fade) — matching a GIF whose own frames
+     toggle a cursor on/off rather than cross-fading it.
+   - Position the cursor element according to your specific logo's own
+     dimensions. --liveask-brand-cursor-offset (declared in :host
+     above) holds the canonical, fixed LiveAsk alignment (-1px) — this
+     is not exposed as a per-deployment default to vary; a genuinely
+     different asset's offset need would be handled deliberately at
+     configuration level when that actual need exists, not built in
+     here in advance of it.
+
+   Mechanics of the animation itself, since steps() timing functions are
+   easy to get subtly wrong: with three keyframes at 0%/50%/100% and
+   `steps(1)` (equivalent to `steps(1, end)`), each 0%→50% and 50%→100%
+   segment holds its START value for the full segment duration and only
+   jumps to the END value at that segment's boundary — never a
+   continuous fade. That yields opacity:1 held for the first 750ms of
+   the 1.5s cycle, an instant cut to opacity:0 at the midpoint, opacity:0
+   held for the remaining 750ms, then an instant cut back to opacity:1
+   as the cycle repeats — a hard blink, synchronized to a 750ms cadence,
+   not a smooth transition.
+   ============================================================ */
+.liveask-brand-cursor{margin-left:var(--liveask-brand-cursor-offset);animation:liveask-brand-cursor-blink 1.5s steps(1) infinite}
+@keyframes liveask-brand-cursor-blink{0%{opacity:1}50%{opacity:0}100%{opacity:0}}
+
+.ask-mic{background:none;border:none;color:var(--ink-soft);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,color .15s}
+.ask-mic:hover{background:var(--paper);color:var(--navy)}
+.ask-mic svg{width:19px;height:19px}
+.ask-mic.listening{color:var(--logo-blue)}
+/* Primary circular action — 42px desktop per the UIP target (was 38px).
+   Built with a state-modifier hook, not just a static send button: the
+   brief requires the geometry to comfortably support idle/talk,
+   text-present/send, active-voice, and future human-call states later,
+   without implementing any of them now. .ask-send--idle-talk and
+   .ask-send--listening are unused placeholders today — no JS sets them
+   yet — kept deliberately inert so this pass doesn't imply voice
+   behaviour exists. */
+.ask-send{background:var(--logo-blue);color:#fff;border:none;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s}
+.ask-send--idle-talk{background:var(--ink-soft)}
+.ask-send--listening{background:var(--danger)}
+.ask-send:hover{background:var(--logo-blue-deep)}
+.ask-send svg{width:18px;height:18px}
+
+/* Row 2: content-led, not a fixed zone — height comes from its tallest
+   child (the 42px send button) plus this padding, not a hardcoded row
+   height. Desktop composer total, computed explicitly:
+   16 (Row 1 top) + 22 (line-height) + 6 (Row 1→2 gap, see above)
+   + 42 (send button, standing in for the brief's ≈40px "control zone")
+   + 12 (this bottom padding) = 98px — 2px over the ≈96px target,
+   within the stated ±4px tolerance. Recorded here, not silently
+   rounded away. */
+.ask-row2{display:flex;align-items:center;gap:8px;padding:0 16px 12px}
+.ask-row2-left{display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex:1 1 auto;min-width:0}
+.ask-row2-right{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto}
+.ask-row2-plus{flex-shrink:0;width:26px;height:26px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;user-select:none;cursor:pointer;background:none;border:none;padding:0;position:relative;z-index:61}
+.ask-row2-plus:hover{color:var(--navy)}
+.ask-row2-plus svg{width:22px;height:22px}
+
+/* ============================================================
+   `+` menu / Secondary Input Layer — same shared popover shell used
+   for the public + menu, Admin PIN entry, Give Feedback, Restart Tour,
+   and every RA Admin sub-view. This is the highest-risk region to
+   preserve exactly, per the pre-spec review — it's the one place the
+   ordinary visitor UI and the Tour/Admin engine share rendering code.
+   ============================================================ */
+.ask-panel-scrim{display:none;position:fixed;inset:0;background:transparent;z-index:59}
+.ask-panel-scrim.open{background:rgba(29,42,58,.35)}
+.ask-popover{display:none;position:absolute;width:min(320px,90vw);max-height:60vh;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(29,42,58,.18);padding:8px;z-index:60}
+.ask-popover.open{display:block}
+.ask-popover-section-label{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--logo-blue);line-height:1.2;padding:0 10px 12px}
+.ask-popover-section-label--first{padding-top:12px}
+.ask-popover-divider{height:1px;background:#D8DEE5;margin:16px 4px}
+.ask-popover-item{display:block;width:100%;text-align:left;background:none;border:none;font:inherit;font-size:15.20px;color:var(--ink);padding:11px 10px;border-radius:8px;cursor:pointer;transition:background .12s}
+.ask-popover-item:hover,.ask-popover-item:focus-visible{background:rgba(0,95,174,.07)}
+.ask-popover-item.ask-popover-item--muted{color:var(--ink-soft);font-size:13.60px;cursor:default}
+.ask-popover-item.ask-popover-item--muted:hover{background:none}
+.ask-popover-back{display:block;font-family:var(--mono);font-size:11.52px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);background:none;border:none;cursor:pointer;padding:8px 10px 4px}
+.ask-popover-back:hover{color:var(--ink)}
+.ask-popover-title{font-weight:700;font-size:15.68px;color:var(--navy);padding:4px 10px 8px}
+.ask-popover-field{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:11px 10px;font:inherit;font-size:15.20px;margin:4px 0 10px;transition:border-color .12s}
+.ask-popover-field:focus{border-color:var(--logo-blue);outline:none}
+.ask-popover-field--textarea{resize:vertical;min-height:88px;font-family:inherit;line-height:1.5}
+.ask-popover-actions{display:flex;gap:8px;padding:4px 10px 8px;flex-wrap:wrap}
+.ask-popover-actions .btn--compact{padding:8px 16px;font-size:13.60px}
+.ask-popover-actions .btn--liveask:hover{background:var(--logo-blue-deep)}
+.ask-popover-actions .btn--ghost{border-color:var(--line);color:var(--ink-soft);background:none}
+.ask-popover-actions .btn--ghost:hover{border-color:var(--ink-soft);color:var(--ink)}
+.ask-popover-actions .btn--danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.ask-popover-actions .btn--danger:hover{background:var(--danger-deep);border-color:var(--danger-deep)}
+.ask-popover-error{color:var(--ink-soft);font-weight:600;font-size:13.12px;padding:0 10px 6px}
+.ask-popover-note{color:var(--ink-soft);font-size:13.12px;padding:0 10px 8px}
+.ask-popover-tourrow{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;background:none;border:none;padding:11px 10px;border-radius:8px;cursor:pointer;transition:background .12s}
+.ask-popover-tourrow:hover,.ask-popover-tourrow:focus-visible{background:rgba(0,95,174,.07)}
+.ask-popover-tourrow .txt{min-width:0}
+.ask-popover-tourrow .ttl{font-weight:600;font-size:14.72px;color:var(--ink)}
+.ask-popover-tourrow .meta{font-size:12.48px;color:var(--ink-soft);margin-top:1px}
+.ask-popover-tourrow .chev{color:var(--ink-soft);flex-shrink:0}
+.ask-popover-navrow{display:flex;align-items:center;justify-content:space-between;width:100%;text-align:left;background:none;border:none;font:inherit;font-size:15.20px;color:var(--ink);padding:12px 10px;border-radius:8px;cursor:pointer;transition:background .12s}
+.ask-popover-navrow:hover,.ask-popover-navrow:focus-visible{background:rgba(0,95,174,.07)}
+.ask-popover-navrow .chev{color:var(--ink-soft);flex-shrink:0;margin-left:8px}
+.ask-popover-navrow--danger{color:var(--danger);margin-top:10px;border-top:1px solid var(--line);border-radius:0;padding-top:16px}
+.ask-popover-navrow--danger:hover,.ask-popover-navrow--danger:focus-visible{background:rgba(179,38,30,.06)}
+.ask-popover-navrow--danger .chev{color:var(--danger)}
+.ask-popover-progress{padding:10px 10px 0}
+.ask-popover-progress-label{font-family:var(--mono);font-size:11.20px;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:6px}
+.ask-popover-progress-bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.ask-popover-progress-fill{height:100%;background:var(--logo-blue);border-radius:2px;transition:width .2s}
+.ask-popover-rating-row{display:flex;justify-content:space-between;gap:6px;padding:14px 10px 2px}
+.ask-popover-rating-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:700;font-size:17px;font-family:var(--body);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .12s,border-color .12s,color .12s}
+.ask-popover-rating-btn:hover,.ask-popover-rating-btn:focus-visible{border-color:var(--logo-blue);color:var(--logo-blue)}
+.ask-popover-rating-scale{display:flex;justify-content:space-between;padding:2px 10px 10px;font-size:11.52px;color:var(--ink-soft)}
+.ask-popover-detail-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:4px 10px 10px}
+.ask-popover-detail-title{font-weight:700;font-size:16.32px;color:var(--navy)}
+.ask-popover-status-pill{display:inline-block;font-family:var(--mono);font-size:10.40px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:20px}
+.ask-popover-status-pill--active{background:rgba(0,95,174,.1);color:var(--logo-blue)}
+.ask-popover-status-pill--expired{background:rgba(74,90,110,.12);color:var(--ink-soft)}
+.ask-popover-detail-meta{padding:0 10px 6px;font-size:13.60px}
+.ask-popover-detail-row{display:flex;justify-content:space-between;gap:14px;padding:6px 0;border-bottom:1px solid var(--paper)}
+.ask-popover-detail-row:last-child{border-bottom:none}
+.ask-popover-detail-row .k{color:var(--ink-soft);flex-shrink:0}
+.ask-popover-detail-row .v{color:var(--ink);font-weight:600;text-align:right}
+.ask-popover-itemrow{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;background:none;border:none;padding:11px 10px;border-radius:8px;cursor:pointer;transition:background .12s}
+.ask-popover-itemrow:hover,.ask-popover-itemrow:focus-visible{background:rgba(0,95,174,.07)}
+.ask-popover-itemrow .txt{min-width:0}
+.ask-popover-itemrow .ttl{font-weight:600;font-size:14.72px;color:var(--ink)}
+.ask-popover-itemrow .meta{font-size:12.48px;color:var(--ink-soft);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ask-popover-itemrow .chev{color:var(--ink-soft);flex-shrink:0}
+
+/* ============================================================
+   Messages, quick replies, system text
+   ============================================================ */
+/* ============================================================
+   Conversation Panel redesign — 31 August 2026, per
+   LiveAsk_Conversation_Panel_UX_Spec_CANONICAL_20260831.md.
+   Visitor bubble right-aligned/compact/light fill; AI response plain
+   text on panel background, no bubble, no permanent label. Typography
+   here is DELIBERATELY separate from the UIP/CURSOR_LOCK contract
+   above — this spec explicitly does not redesign the UIP, and the
+   UIP's caret-driving metrics (18.4px/400/1.1) are untouched by any
+   of the below.
+   ============================================================ */
+/* margin-bottom tightened from 24px to 16px (1 September 2026
+   correction, §2) — a single uniform value, applied to every .ask-msg
+   regardless of what precedes or follows it, per the explicit
+   instruction not to introduce separate spacing rules for
+   visitor→AI vs AI→visitor transitions. 16px is a proposed value, not
+   a locked one — worth confirming against the actual preview render
+   rather than treating as final from text alone. */
+.ask-msg{margin-bottom:16px;font-size:16px;line-height:1.5;font-weight:400;color:#1a1a1a;max-width:100%}
+.ask-msg p{white-space:pre-line;margin:0}
+.ask-msg p + p{margin-top:12px}
+
+.ask-msg.visitor{display:flex;justify-content:flex-end}
+.ask-msg.visitor p{background:#eef0f2;color:#1a1a1a;border-radius:16px;padding:10px 14px;max-width:66%;display:inline-block;text-align:left;font-weight:400}
+
+.ask-msg.ai{color:#1a1a1a}
+.ask-msg.ai p{color:#1a1a1a}
+.ask-msg.ai ul,.ask-msg.ai ol{margin:12px 0;padding-left:22px}
+.ask-msg.ai li{margin-bottom:4px}
+.ask-msg.ai a{color:var(--logo-blue)}
+.ask-msg.ai strong{font-weight:600}
+
+.ask-msg.ai .ask-privacynotice{font-size:13px;color:#5a6472;opacity:.9;margin:0 0 10px;white-space:normal;font-style:normal}
+.ask-msg.ai .ask-privacynotice a{color:var(--logo-blue);text-decoration:underline}
+
+/* ---- Transient thinking/answering identity ----
+   One stable-height slot for the life of an active response. The
+   emoji-only opacity animation (already built for the previous
+   "LiveAsk AI (thinking)" treatment) is reused here for both states;
+   only the emoji character and the surrounding text change between
+   phases, not the animation mechanism itself. min-height matches the
+   element's own natural single-line height so its removal after the
+   ~5s completion fade cannot cause a reflow jump — the space is
+   reserved by the wrapper, not by the text inside it. */
+.ask-identity{min-height:22px;margin-bottom:8px;font-size:14px;color:#5a6472;display:flex;align-items:center;gap:6px;transition:opacity .4s ease}
+.ask-identity.ask-identity--fading{opacity:0}
+/* 1 September 2026 correction: the actual LiveAsk SVG mark (reused from
+   .ask-liveask-inline's own asset) replacing the previous "LiveAsk AI"
+   text label — height matched to that same existing inline-logo
+   convention (20px) for visual consistency between the two places this
+   mark now appears. */
+.ask-identity-logo{height:20px;width:auto}
+/* Emoji sized against the actual SVG: the K-arm rects span y=22.8 to
+   y=115.67 in a 93.2-unit-tall viewBox — essentially the full height
+   of the mark, not a small fraction of it. Since the logo itself
+   renders at 20px (.ask-identity-logo), matching the emoji to the
+   K-arms means sizing it close to that same 20px, accounting for most
+   emoji fonts drawing their glyph slightly smaller than the nominal
+   font-size within its own box — 22px is a reasoned estimate from
+   that relationship, not a guess, though exact emoji rendering varies
+   by platform font and may need a final small adjustment once seen. */
+.ask-identity-emoji{display:inline-block;font-size:22px;line-height:1;animation:ask-thinking-emoji-fade 1.8s ease-in-out infinite}
+
+/* ---- Persistent Conversation Panel footer ----
+   Structurally OUTSIDE #askThread (the scrollable list), appended
+   once into .ask-box directly — this is the actual fix for the
+   render-order defect named in the spec: a sibling of the thread, not
+   a member of it, cannot ever end up "above" a thread element by
+   render-order accident, because the two are never reordered relative
+   to each other at all. Left slot reserved for a future "•••" but
+   left empty/unrendered until real utilities exist behind it, per
+   the spec's explicit "do not show an empty menu" instruction. */
+/* Restructured to a 3-column grid (1 September 2026 correction) — with
+   flex + justify-content:space-between, the middle "copy" text was
+   only ever roughly centred, and became genuinely left-aligned once
+   the overflow button was display:none (removed from layout entirely,
+   leaving only 2 items for space-between to distribute). A grid with
+   symmetric 1fr outer columns keeps the middle column exactly centred
+   on the full footer width regardless of how wide the two outer
+   elements actually are — true centring, not an approximation that
+   happens to look right for one specific pair of widths. */
+.ask-footer{display:none;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:10px 16px;font-size:13px}
+.ask-footer.active{display:grid}
+/* visibility:hidden, not display:none (1 September 2026 correction) —
+   still occupies its grid column so the layout's symmetry holds even
+   before any real utility exists behind it; remains invisible and
+   non-interactive until one does. */
+.ask-footer-overflow{visibility:hidden;justify-self:start;background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:16px;padding:4px;flex-shrink:0}
+.ask-footer-copy{justify-self:center;background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:13px;padding:4px 0}
+.ask-footer-copy:hover{color:var(--ink)}
+.ask-footer-copy.ask-footer-copy--sent{color:#2c7a4b;cursor:default}
+.ask-footer-hide{justify-self:end;background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:13px;padding:4px 0;display:flex;align-items:center;gap:4px}
+.ask-footer-hide:hover{color:var(--ink)}
+.ask-footer-hide svg{width:12px;height:12px}
+
+/* ---- Conditional return-to-latest control ----
+   Floats centrally just above the footer, hidden by default —
+   JS toggles .visible based on scroll state, never removes/re-creates
+   the element (avoids any risk of losing its own event listener). */
+/* Reparented onto #askThread itself (1 September 2026 correction) — see
+   ensureScrollLatestButton() in runtime.js for why this anchor is
+   structurally correct rather than a guessed offset: .ask-thread ends
+   exactly where the footer/UIP begin, so a small, fixed offset from
+   *this* container's own bottom edge means "just above the footer,
+   never over the UIP" holds regardless of either's actual height. */
+/* position:sticky wrapper technique, 1 September 2026 second correction
+   — see ensureScrollLatestButton() in runtime.js for why the earlier
+   position:absolute-on-a-scrolling-container approach was a real bug
+   (it scrolled away with the content instead of staying fixed). The
+   wrapper sticks to the bottom of #askThread's own scrolling viewport
+   without taking up space in the message flow (height:0); the actual
+   button is positioned absolutely within that now-pinned wrapper. */
+/* Third correction, 1 September 2026: position:sticky has now failed
+   in actual observed rendering too, not just the position:absolute-
+   inside-a-scrolling-container attempt before it. Reverted to a plain
+   position:absolute child of .ask-output-panel (which does not scroll
+   — only #askThread inside it does), anchored with bottom:49px —
+   computed from the footer's own actual CSS (13px font-size x the
+   1.6 base line-height ≈ 20.8px, + 10px top + 10px bottom padding ≈
+   41px total footer height, + 8px gap so the arrow doesn't touch the
+   footer's edge), not a round guess. The footer's height is stable
+   (a single-line utility bar, not user-content-driven), so a computed
+   fixed offset is a reasonable tradeoff here for a mechanism that is
+   easy to reason about and verify, over one that has now broken twice. */
+.ask-scroll-latest{display:none;position:absolute;left:50%;bottom:49px;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid var(--line);box-shadow:0 2px 8px rgba(29,42,58,.15);align-items:center;justify-content:center;cursor:pointer;z-index:5}
+.ask-scroll-latest.visible{display:flex}
+.ask-scroll-latest svg{width:16px;height:16px;color:var(--ink-soft)}
+
+.ask-quickreply-btn{font:inherit;font-size:13.76px;line-height:1.3;color:var(--navy);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.ask-quickreply-btn:hover{background:var(--logo-blue);border-color:var(--logo-blue);color:#fff}
+/* Reused by .ask-identity-emoji above (Conversation Panel redesign,
+   31 August 2026) — the old .ask-thinking/.ask-thinking-emoji classes
+   this animation was originally built for are superseded and removed;
+   the animation itself carries over unchanged. */
+@keyframes ask-thinking-emoji-fade {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.ask-sysnote{text-align:center;font-family:var(--mono);font-size:11.84px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 14px;opacity:.85}
+/* ---- Menu/interface-action receipt, 1 September 2026 correction ----
+   Left-aligned, distinct from both the right-aligned visitor bubble and
+   the centred/uppercase .ask-sysnote treatment above (which remains in
+   use for internal/admin notes only, e.g. Admin: Create Tour — this is
+   deliberately a separate, visitor-facing treatment).
+
+   Colours are the exact values specified for this treatment, used as
+   literal hex here rather than through --logo-blue: the existing token
+   is #005FAE, one hex digit different from the #005FAF specified for
+   this work — flagged, not silently reconciled either direction, since
+   changing the shared token would ripple into every other element that
+   already uses it, well outside this scoped correction. */
+.ask-action-receipt{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ask-action-receipt-label{color:#005FAF;font-size:16px;font-weight:400}
+.ask-action-receipt-pill{background:#E8F1FB;color:#005FAF;font-size:16px;font-weight:600;border-radius:999px;padding:2px 10px}
+
+/* ============================================================
+   Responsive rules — both confirmed dependencies. The max-width:700px
+   rule was found buried inside an otherwise page-specific, unrelated
+   media block on all three source pages during dependency tracing;
+   surfaced here as its own clean, panel-scoped rule instead.
+   ============================================================ */
+@media (min-width: 1024px) {
+  .ask-panel .wrap { max-width: 700px; margin: 0 auto; }
+}
+
+@media (max-width: 640px) {
+  /* Full-width bottom-sheet treatment removed (30 August 2026 UIP
+     refinement) — the + menu and every shared secondary panel now use
+     the same upward/flip-fallback positioning as desktop (see
+     positionPopover() in runtime.js), anchored to the + button and
+     content-led in width/height, not a page-width sheet. The base
+     .ask-popover rule's width:min(320px,90vw) already keeps this
+     comfortably within narrow viewports without a mobile-specific
+     override. */
+  .ask-popover-rating-btn{width:40px;height:40px;font-size:14.72px}
+  .ask-popover-rating-row{padding:12px 6px 2px}
+
+  /* Composer geometry — mobile. The original reference source never
+     had a separate mobile row-padding value at all — one uniform
+     14px/16px applied everywhere. The mobile-specific override that
+     used to live here (16px 16px 12px) was invented during the same
+     30/31 August passes as the desktop asymmetry, for the same reason,
+     and is removed for the same reason: restoring the original,
+     symmetric desktop rule to apply uniformly here too is what keeps
+     the caret's alignment against the centered placeholder/logo
+     correct, on this breakpoint as much as any other. Resulting total:
+     14 (Row 1 top) + 20.24 (line-height) + 14 (Row 1 bottom) + 48
+     (send button) + 12 (Row 2 bottom padding) = 108.24px. */
+  .ask-uip{border-radius:30px}
+  /* line-height reverted to 1.1 here too (30 August 2026 caret
+     correction). Font-size corrected to 18.4px (31 August 2026,
+     CURSOR_LOCK) — the original reference source used one uniform
+     tight ratio AND one uniform font-size on every breakpoint; there
+     was never a separate mobile value for either to preserve. */
+  .ask-input-row textarea,
+  .ask-fake-placeholder{font-size:18.4px;line-height:1.1}
+  .ask-send{width:48px;height:48px}
+}

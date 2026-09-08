@@ -1761,14 +1761,11 @@
       <img src="assets/liveask-logo.gif" alt="LiveAsk">
     </a>
 
-    <!-- Primary navigation. Presentational only for Pass 1 — real
-         conversational-trigger behaviour is deferred until the actual
-         LiveAsk frontend component is supplied and integrated. -->
     <nav class="primary-nav" aria-label="Primary">
-      <a href="#">What is LiveAsk?</a>
-      <a href="#">My Business</a>
-      <a href="#"><span data-desktop>LiveAsk Agents</span><span data-mobile>Agents</span></a>
-      <a href="#">Contact</a>
+      <a href="#liveask-overview">What is LiveAsk?</a>
+      <a href="#liveask-business">My Business</a>
+      <a href="#liveask-enhancements"><span data-desktop>LiveAsk Agents</span><span data-mobile>Agents</span></a>
+      <a href="#liveask-primary-mount" data-nav-intent="contact">Contact</a>
     </nav>
 
   </div>
@@ -1777,17 +1774,7 @@
 <main>
   <div class="wrap">
 
-    <!-- RESERVED INTEGRATION POINT — not the real LiveAsk component.
-         Structure/position/proportions only. -->
-    <div class="liveask-bar" role="presentation">
-      <div class="bar-logo">
-        <img src="assets/liveask-bar-mark.png" alt="">
-        <span class="bar-cursor" aria-hidden="true"></span>
-      </div>
-      <div class="bar-reserve"></div>
-    </div>
-
-    <p class="liveask-privacy-notice">LiveAsk uses AI to answer your questions. Please don&rsquo;t share sensitive information. <a href="privacy.html">Privacy</a></p>
+    <div id="liveask-primary-mount" aria-label="Ask LiveAsk"></div>
 
     <p class="tagline">
       <span class="plain">Real conversations. </span>
@@ -1795,7 +1782,7 @@
       <span class="plain"> Real results.</span>
     </p>
 
-    <section class="hero">
+    <section class="hero" id="liveask-overview">
       <div class="hero-content">
         <div class="hero-heading">
           <h1>
@@ -2376,7 +2363,7 @@
   </div>
 </section>
 
-<section class="generative-section">
+<section class="generative-section" id="liveask-governance">
   <div class="wrap">
 
     <svg class="comp-icon-defs" aria-hidden="true" focusable="false">
@@ -2440,7 +2427,7 @@
   </div>
 </section>
 
-<section class="business-section">
+<section class="business-section" id="liveask-business">
   <div class="wrap">
 
     <svg class="comp-icon-defs" aria-hidden="true" focusable="false">
@@ -2506,7 +2493,7 @@
   </div>
 </section>
 
-<section class="starters-section">
+<section class="starters-section" id="liveask-enhancements">
   <div class="wrap">
 
     <svg class="comp-icon-defs" aria-hidden="true" focusable="false">
@@ -2831,6 +2818,12 @@
   });
 })();
 </script>
+
+<script src="widget.js"
+        data-liveask-site="liveask_au"
+        data-worker-url="https://ask-liveask.chriscarroll-promptworkx.workers.dev"
+        data-company-name="LiveAsk"
+        data-liveask-mount="liveask-primary-mount"></script>
 
 </body>
 </html>
