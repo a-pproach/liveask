@@ -234,6 +234,7 @@
    conflict. */
 .ask-fake-placeholder{position:absolute;left:115px;top:50%;transform:translateY(-50%) translateZ(0);will-change:contents;font-family:var(--body);font-size:18.4px;color:var(--ink-soft);pointer-events:none;transition:opacity .6s ease;z-index:1;max-width:calc(100% - 131px);line-height:1.1;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .ask-fake-placeholder.fade{opacity:0}
+.ask-voice-status{display:none;position:absolute;left:115px;right:16px;top:50%;transform:translateY(-50%);font-family:var(--body);font-size:18.4px;font-style:italic;font-weight:400;line-height:1.1;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:3}
 /* Drift resolved: source pages disagreed here (index.html: nowrap;
    liveask/ai-tips: normal). liveask-index.html and ai-tips-index.html
    were byte-identical to each other everywhere else in this ruleset,
@@ -301,36 +302,60 @@
 .liveask-brand-cursor{margin-left:var(--liveask-brand-cursor-offset);animation:liveask-brand-cursor-blink 1.5s steps(1) infinite}
 @keyframes liveask-brand-cursor-blink{0%{opacity:1}50%{opacity:0}100%{opacity:0}}
 
-.ask-mic{background:none;border:none;color:var(--ink-soft);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,color .15s}
-.ask-mic:hover{background:var(--paper);color:var(--navy)}
-.ask-mic svg{width:19px;height:19px}
-.ask-mic.listening{color:var(--logo-blue)}
-/* Primary circular action — 42px desktop per the UIP target (was 38px).
-   Built with a state-modifier hook, not just a static send button: the
-   brief requires the geometry to comfortably support idle/talk,
-   text-present/send, active-voice, and future human-call states later,
-   without implementing any of them now. .ask-send--idle-talk and
-   .ask-send--listening are unused placeholders today — no JS sets them
-   yet — kept deliberately inert so this pass doesn't imply voice
-   behaviour exists. */
-.ask-send{background:var(--logo-blue);color:#fff;border:none;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s}
-.ask-send--idle-talk{background:var(--ink-soft)}
-.ask-send--listening{background:var(--danger)}
+.ask-mic{display:flex;min-width:76px;height:40px;padding:0;align-items:center;justify-content:center;background:none;border:none;color:#111;cursor:pointer;flex-shrink:0}
+.ask-mic:disabled{cursor:default;opacity:.42}
+.ask-mic-surface{display:flex;height:27px;padding:0 9px;align-items:center;justify-content:center;gap:5px;border:1px solid #9eabba;border-radius:14px;background:#f8fafc;box-shadow:0 1px 2px rgba(35,45,58,.08);font-family:var(--body);font-size:11px;font-weight:400;color:#1f2937;white-space:nowrap}
+.ask-mic-icon{position:relative;display:grid;width:15px;height:17px;place-items:center;color:#111}
+.ask-mic-icon svg{display:block;width:15px;height:17px}
+.ask-mute-slash{display:none;position:absolute;width:20px;height:2px;border-radius:2px;background:#111;transform:rotate(-48deg)}
+.ask-dictation-stop{display:none;width:9px;height:9px;border-radius:1px;background:#fff}
+.ask-send{position:relative;background:var(--logo-blue);color:#fff;border:none;width:40px;height:40px;padding:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;flex-shrink:0;box-shadow:0 2px 6px rgba(0,95,174,.25);transition:background .15s,box-shadow .15s}
 .ask-send:hover{background:var(--logo-blue-deep)}
-.ask-send svg{width:18px;height:18px}
+.ask-send-arrow,.ask-cancel-cross,.ask-stop-square,.ask-connection-spinner{display:none}
+.ask-send-arrow{width:22px;height:22px}
+.ask-cancel-cross{font-size:23px;line-height:1}
+.ask-stop-square{width:13px;height:13px;border-radius:2px;background:#fff}
+.ask-voice-wave{display:flex;height:16px;align-items:center;gap:2px}
+.ask-voice-wave i{display:block;width:2px;border-radius:2px;background:#fff}
+.ask-voice-wave i:nth-child(1),.ask-voice-wave i:nth-child(5){height:6px}
+.ask-voice-wave i:nth-child(2),.ask-voice-wave i:nth-child(4){height:12px}
+.ask-voice-wave i:nth-child(3){height:16px}
+.ask-connection-spinner{position:absolute;inset:-3px;border:2px solid rgba(0,95,174,.2);border-top-color:var(--logo-blue);border-radius:50%;animation:ask-voice-spin 1s linear infinite}
+@keyframes ask-voice-spin{to{transform:rotate(360deg)}}
+
+.ask-uip.is-typed .ask-voice-wave{display:none}
+.ask-uip.is-typed .ask-send-arrow{display:block}
+.ask-uip.is-typed .ask-send{background:#3b82f6;box-shadow:0 2px 7px rgba(59,130,246,.28)}
+.ask-uip.is-connecting .ask-input-row textarea,.ask-uip.is-connecting .ask-fake-placeholder,.ask-uip.is-connecting .ask-voice-wave,.ask-uip.is-connecting .ask-send-arrow{display:none}
+.ask-uip.is-connecting .ask-liveask-inline,.ask-uip.is-connecting .ask-voice-status,.ask-uip.is-connecting .ask-cancel-cross,.ask-uip.is-connecting .ask-connection-spinner{display:block;opacity:1}
+.ask-uip.is-ending .ask-input-row textarea,.ask-uip.is-ending .ask-fake-placeholder,.ask-uip.is-ending .ask-voice-wave,.ask-uip.is-ending .ask-send-arrow{display:none}
+.ask-uip.is-ending .ask-liveask-inline,.ask-uip.is-ending .ask-voice-status,.ask-uip.is-ending .ask-stop-square{display:block;opacity:1}
+.ask-uip.is-ending .ask-send{background:#c83b43}
+.ask-uip.is-voice .ask-input-row textarea,.ask-uip.is-voice .ask-fake-placeholder,.ask-uip.is-voice .ask-voice-wave,.ask-uip.is-voice .ask-send-arrow{display:none}
+.ask-uip.is-voice .ask-liveask-inline,.ask-uip.is-voice .ask-voice-status,.ask-uip.is-voice .ask-stop-square{display:block;opacity:1}
+.ask-uip.is-voice .ask-send{background:#c83b43;box-shadow:0 2px 7px rgba(200,59,67,.25)}
+.ask-uip.is-voice .ask-mic-surface{border-color:#e6aeb5;background:#fdecef}
+.ask-uip.is-speaking .ask-voice-status{color:var(--logo-blue)}
+.ask-uip.is-muted .ask-mute-slash{display:block}
+.ask-uip.is-dictating .ask-liveask-inline,.ask-uip.is-dictating .ask-fake-placeholder{display:none}
+.ask-uip.is-dictating .ask-mic-surface{width:27px;padding:0;border-color:#111;background:#111}
+.ask-uip.is-dictating .ask-mic-icon,.ask-uip.is-dictating .ask-mic-label{display:none}
+.ask-uip.is-dictating .ask-dictation-stop,.ask-uip.is-dictating .ask-send-arrow{display:block}
+.ask-uip.is-dictating .ask-voice-wave{display:none}
+.ask-uip.is-dictating.is-awaiting-speech .ask-input-row textarea{display:none}
+.ask-uip.is-dictating.is-awaiting-speech .ask-voice-status{display:block;left:16px}
+.ask-voice-audio{display:none}
+.ask-voice-notice-face{display:inline-block;margin-right:5px}
 
 /* Row 2: content-led, not a fixed zone — height comes from its tallest
-   child (the 42px send button) plus this padding, not a hardcoded row
+   child (the 40px primary control) plus this padding, not a hardcoded row
    height. Desktop composer total, computed explicitly:
    16 (Row 1 top) + 22 (line-height) + 6 (Row 1→2 gap, see above)
-   + 42 (send button, standing in for the brief's ≈40px "control zone")
-   + 12 (this bottom padding) = 98px — 2px over the ≈96px target,
-   within the stated ±4px tolerance. Recorded here, not silently
-   rounded away. */
-.ask-row2{display:flex;align-items:center;gap:8px;padding:0 16px 12px}
-.ask-row2-left{display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex:1 1 auto;min-width:0}
+   + 40 (primary control) + 12 (this bottom padding) = 96px. */
+.ask-row2{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:5px;padding:0 16px 12px}
+.ask-row2-left{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px;min-width:0;min-height:40px}
 .ask-row2-right{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto}
-.ask-row2-plus{flex-shrink:0;width:26px;height:26px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;user-select:none;cursor:pointer;background:none;border:none;padding:0;position:relative;z-index:61}
+.ask-row2-plus{flex-shrink:0;width:34px;height:34px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;user-select:none;cursor:pointer;background:none;border:none;padding:0;position:relative;z-index:61}
 .ask-row2-plus:hover{color:var(--navy)}
 .ask-row2-plus svg{width:22px;height:22px}
 
@@ -602,5 +627,5 @@
      was never a separate mobile value for either to preserve. */
   .ask-input-row textarea,
   .ask-fake-placeholder{font-size:18.4px;line-height:1.1}
-  .ask-send{width:48px;height:48px}
+  .ask-send{width:40px;height:40px}
 }

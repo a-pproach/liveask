@@ -229,15 +229,15 @@
               '<div class="ask-input-row">' +
                 '<img class="ask-liveask-inline" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnIHN0YW5kYWxvbmU9J25vJz8+CjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNy4zLjEsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT48c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSI0LjIgMjIuNiAzNzIuOCA5My4yIiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDQuMiAyMi42IDM3Mi44IDkzLjI7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7ZmlsbDojMDA1RkFFO30KCS5zdDF7ZmlsbDpub25lO3N0cm9rZTojNDg0ODRBO3N0cm9rZS13aWR0aDozLjMxNTE7c3Ryb2tlLW1pdGVybGltaXQ6MTA7fQoJLnN0MntlbmFibGUtYmFja2dyb3VuZDpuZXcgICAgO30KCS5zdDN7ZmlsbDojNDg0ODRBO3N0cm9rZTojNDg0ODRBO3N0cm9rZS13aWR0aDoxLjM0ODg7c3Ryb2tlLW1pdGVybGltaXQ6MTA7fQoJLnN0NHtmaWxsOiMwMDVGQUU7c3Ryb2tlOiMwMDVGQUU7c3Ryb2tlLXdpZHRoOjEuMzQ4ODtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9Cgkuc3Q1e2ZpbGw6IzAwNUZBRTtzdHJva2U6IzAwNUZBRTtzdHJva2Utd2lkdGg6MS4zNDg4O3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjEwO30KPC9zdHlsZT4KPGc+Cgk8Zz4KCQk8Zz4KCQkJCgkJCQk8cmVjdCB4PSIzNjMuMzQiIHk9IjMyLjk1IiB0cmFuc2Zvcm09Im1hdHJpeCg0LjQ4NjkwNmUtMTEgLTEgMSA0LjQ4NjkwNmUtMTEgMzQwLjUzODIgNDA5Ljg1NDMpIiBjbGFzcz0ic3QwIiB3aWR0aD0iMjMuNzIiIGhlaWdodD0iMy40MiIvPgoJCQk8cmVjdCB4PSIzNTMuMTkiIHk9IjIyLjgiIGNsYXNzPSJzdDAiIHdpZHRoPSIyMy43MiIgaGVpZ2h0PSIzLjQyIi8+CgkJPC9nPgoJCTxnPgoJCQkKCQkJCTxyZWN0IHg9IjM2My4zNCIgeT0iMTAyLjA5IiB0cmFuc2Zvcm09Im1hdHJpeCg0LjQ4Njg4MWUtMTEgMSAtMSA0LjQ4Njg4MWUtMTEgNDc4Ljk5ODggLTI3MS4zOTM3KSIgY2xhc3M9InN0MCIgd2lkdGg9IjIzLjcyIiBoZWlnaHQ9IjMuNDIiLz4KCQkJPHJlY3QgeD0iMzUzLjE5IiB5PSIxMTIuMjUiIGNsYXNzPSJzdDAiIHdpZHRoPSIyMy43MiIgaGVpZ2h0PSIzLjQyIi8+CgkJPC9nPgoJPC9nPgoJPGc+CgkJPGcgY2xhc3M9InN0MiI+CgkJCTxwYXRoIGNsYXNzPSJzdDMiIGQ9Ik00LjkzLDEwNi42NnYtNzQuMWg3LjExdjY3Ljc4aDM1LjIxdjYuMzJINC45M3oiLz4KCQkJPHBhdGggY2xhc3M9InN0MyIgZD0iTTY0LjU2LDQwLjc2Yy0xLjMzLDAtMi40OC0wLjQ2LTMuNDYtMS4zOWMtMC45OC0wLjkzLTEuNDctMi4wNC0xLjQ3LTMuMzNjMC0xLjMzLDAuNDktMi40NCwxLjQ3LTMuMzYgICAgIGMwLjk4LTAuOTEsMi4xMy0xLjM3LDMuNDYtMS4zN2MxLjM2LDAsMi41MiwwLjQ2LDMuNDgsMS4zN2MwLjk2LDAuOTEsMS40NCwyLjAzLDEuNDQsMy4zNmMwLDEuMjktMC40OCwyLjQtMS40NCwzLjMzICAgICBDNjcuMDgsNDAuMyw2NS45Miw0MC43Niw2NC41Niw0MC43NnogTTYxLjEzLDEwNi42NnYtNTUuNmg2Ljc2djU1LjZINjEuMTN6Ii8+CgkJCTxwYXRoIGNsYXNzPSJzdDMiIGQ9Ik0xMDEuMDcsMTA2LjY2bC0yMS4yNC01NS42aDcuMzZsMTIuODMsMzQuOTZjMS4xNiwzLjEyLDIuMTksNi4yMywzLjA4LDkuMzVjMC44OSwzLjEyLDEuODQsNi4xNSwyLjgzLDkuMSAgICAgaC0yLjM5YzAuOTYtMi45NSwxLjg5LTUuOTgsMi43OS05LjFjMC44OS0zLjExLDEuOTItNi4yMywzLjA4LTkuMzVsMTIuODMtMzQuOTZoNy4zMWwtMjEuMjQsNTUuNkgxMDEuMDd6Ii8+CgkJCTxwYXRoIGNsYXNzPSJzdDMiIGQ9Ik0xNjIuMDksMTA3Ljg1Yy01LjIxLDAtOS43MS0xLjIyLTEzLjUtMy42NmMtMy44LTIuNDQtNi43My01LjgxLTguOC0xMC4xMmMtMi4wNy00LjMxLTMuMTEtOS4yNy0zLjExLTE0Ljg3ICAgICBjMC01LjYsMS4wMi0xMC41OCwzLjA2LTE0LjkyYzIuMDQtNC4zNCw0Ljg5LTcuNzYsOC41NS0xMC4yNWMzLjY2LTIuNDksNy45Mi0zLjczLDEyLjc2LTMuNzNjMy4wNSwwLDUuOTgsMC41Niw4LjgsMS42NyAgICAgYzIuODIsMS4xMSw1LjM1LDIuOCw3LjYxLDUuMDdjMi4yNSwyLjI3LDQuMDMsNS4xNSw1LjMyLDguNjNjMS4yOSwzLjQ4LDEuOTQsNy41OCwxLjk0LDEyLjI4djIuOTNIMTQxLjF2LTUuODJoMzkuOThMMTc4LDc3LjI3ICAgICBjMC0zLjk4LTAuNjgtNy41NC0yLjA0LTEwLjY5Yy0xLjM2LTMuMTUtMy4zLTUuNjQtNS44Mi03LjQ2Yy0yLjUyLTEuODItNS41NS0yLjczLTkuMS0yLjczYy0zLjUxLDAtNi41OSwwLjkzLTkuMjIsMi43OCAgICAgYy0yLjY0LDEuODYtNC42OSw0LjMxLTYuMTcsNy4zNmMtMS40OCwzLjA1LTIuMjEsNi40LTIuMjEsMTAuMDV2My40OGMwLDQuMzQsMC43Niw4LjE1LDIuMjksMTEuNDFjMS41MiwzLjI3LDMuNjksNS44LDYuNDksNy42MSAgICAgYzIuOCwxLjgxLDYuMTEsMi43MSw5LjkyLDIuNzFjMi41OSwwLDQuODYtMC40MSw2Ljg0LTEuMjRjMS45Ny0wLjgzLDMuNjMtMS45Myw0Ljk3LTMuMzFjMS4zNC0xLjM4LDIuMzUtMi44OCwzLjAxLTQuNSAgICAgbDYuNDIsMi4wNGMtMC44NiwyLjMyLTIuMjUsNC40OC00LjE1LDYuNDdjLTEuOTEsMS45OS00LjMsMy41OS03LjE5LDQuOEMxNjkuMTUsMTA3LjI1LDE2NS44MywxMDcuODUsMTYyLjA5LDEwNy44NXoiLz4KCQkJPHBhdGggY2xhc3M9InN0NCIgZD0iTTE4OS40OSwxMDYuNjZsMjcuMTUtNzQuMUgyMjVsMjcuNCw3NC4xaC03LjQ2bC0xNy42MS00OC40NGMtMC45OS0yLjY5LTIuMDgtNS44My0zLjI2LTkuNDIgICAgIGMtMS4xOC0zLjYtMi41My03LjkzLTQuMDUtMTNoMS40OWMtMS41Miw1LjExLTIuODgsOS40OC00LjA4LDEzLjEzYy0xLjE5LDMuNjUtMi4yNCw2Ljc1LTMuMTMsOS4zTDE5NywxMDYuNjZIMTg5LjQ5eiAgICAgIE0yMDIuMTIsODQuNjN2LTYuMjdoMzcuNjV2Ni4yN0gyMDIuMTJ6Ii8+CgkJCTxwYXRoIGNsYXNzPSJzdDQiIGQ9Ik0yODEuNDQsMTA3Ljg1Yy0zLjY1LDAtNi44OC0wLjU2LTkuNy0xLjY3Yy0yLjgyLTEuMTEtNS4xNC0yLjczLTYuOTYtNC44N2MtMS44Mi0yLjE0LTMuMDctNC43Ny0zLjczLTcuODggICAgIGw2LjQ3LTEuNTRjMC44LDMuMzUsMi4zOCw1Ljg0LDQuNzUsNy40OGMyLjM3LDEuNjQsNS40LDIuNDYsOS4wNywyLjQ2YzQuMjEsMCw3LjU4LTAuOTQsMTAuMTItMi44MyAgICAgYzIuNTQtMS44OSwzLjgxLTQuMjQsMy44MS03LjA2YzAtMi4yNi0wLjc2LTQuMTMtMi4yNi01LjYyYy0xLjUxLTEuNDktMy43Ny0yLjYtNi43OS0zLjMzbC05LjA1LTIuMTkgICAgIGMtNC43OC0xLjE2LTguMzUtMi45Ny0xMC43Mi01LjQ0Yy0yLjM3LTIuNDctMy41Ni01LjU4LTMuNTYtOS4zM2MwLTMuMTIsMC44NC01Ljg1LDIuNTEtOC4yMWMxLjY3LTIuMzUsMy45OC00LjE5LDYuOTEtNS41MiAgICAgYzIuOTMtMS4zMyw2LjI3LTEuOTksMTAuMDItMS45OWMzLjUxLDAsNi41MywwLjU0LDkuMDUsMS42MmMyLjUyLDEuMDgsNC42LDIuNTksNi4yNCw0LjU1YzEuNjQsMS45NiwyLjg3LDQuMjgsMy43MSw2Ljk2ICAgICBsLTYuMTcsMS41OWMtMC44Ni0yLjU1LTIuMy00LjY3LTQuMy02LjM0Yy0yLjAxLTEuNjctNC44My0yLjUxLTguNDgtMi41MWMtMy42OCwwLTYuNzEsMC44OC05LjEsMi42NCAgICAgYy0yLjM5LDEuNzYtMy41OCw0LjAzLTMuNTgsNi44MWMwLDIuMzUsMC44LDQuMjgsMi40MSw1Ljc3YzEuNjEsMS40OSw0LjEyLDIuNjUsNy41MywzLjQ4bDguNSwyLjA0ICAgICBjNC43MSwxLjE2LDguMjMsMi45NywxMC41Nyw1LjQyYzIuMzQsMi40NSwzLjUxLDUuNTIsMy41MSw5LjJjMCwzLjE4LTAuODgsNi0yLjYzLDguNDZjLTEuNzYsMi40NS00LjIsNC4zOC03LjM0LDUuNzcgICAgIEMyODkuMTMsMTA3LjE2LDI4NS41MiwxMDcuODUsMjgxLjQ0LDEwNy44NXoiLz4KCQk8L2c+CgkJPGc+CgkJCTxnPgoJCQkJPHBhdGggY2xhc3M9InN0NSIgZD0iTTMxNy42LDEwNi42NnYtNzQuMWg3LjA2djI1LjcxbC0wLjEsMTYuNzFsMC4xLDMuNjN2MjguMDVIMzE3LjZ6IE0zMjIuNjIsODMuNjNsLTAuMjUtNy41MSAgICAgIGMxLjc5LTIuMjUsMy41NS00LjQyLDUuMjctNi40OWMxLjcyLTIuMDcsMy40Ny00LjEyLDUuMjUtNi4xNGMxLjc3LTIuMDIsMy42MS00LjA1LDUuNS02LjA3bDMwLjg3LTMyLjQzbDYuMjQsMi4yOSAgICAgIGwtMzYuMDYsMzguODRsLTAuNSwwLjE1TDMyMi42Miw4My42M3ogTTM2Ny45MiwxMTMuNTdsLTMzLjIxLTQ1Ljc2bDQuNTMtNS4zMmwzNi4xOCw1MC44NEwzNjcuOTIsMTEzLjU3eiIvPgoJCQk8L2c+CgkJPC9nPgoJPC9nPgo8L2c+Cjwvc3ZnPg==" alt="LiveAsk" width="80" height="20">' +
                 '<span class="ask-fake-placeholder" id="askPlaceholder"></span>' +
+                '<span class="ask-voice-status" id="askVoiceStatus" aria-live="polite"></span>' +
                 '<textarea id="askInput" aria-label="' + ('Ask ' + DEPLOYMENT_COMPANY_NAME) + '" rows="1"></textarea>' +
               '</div>' +
               '<div class="ask-row2" id="askRow2">' +
-                '<div class="ask-row2-left" id="askRow2Left">' +
-                  '<button type="button" class="ask-row2-plus" id="askPlusBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>' +
-                '</div>' +
+                '<button type="button" class="ask-row2-plus" id="askPlusBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>' +
+                '<div class="ask-row2-left" id="askRow2Left"></div>' +
                 '<div class="ask-row2-right">' +
-                  '<button class="ask-mic" id="askMic" aria-label="Ask by voice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></button>' +
-                  '<button class="ask-send" id="askSend" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="6 11 12 5 18 11"></polyline></svg></button>' +
+                  '<button type="button" class="ask-mic" id="askMic" aria-label="Dictate message"><span class="ask-mic-surface"><span class="ask-mic-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg><span class="ask-mute-slash"></span></span><span class="ask-mic-label" id="askMicLabel">Dictate</span><span class="ask-dictation-stop" aria-hidden="true"></span></span></button>' +
+                  '<button type="button" class="ask-send" id="askSend" aria-label="Start Voice"><span class="ask-connection-spinner" aria-hidden="true"></span><span class="ask-voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><svg class="ask-send-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="6 11 12 5 18 11"></polyline></svg><span class="ask-cancel-cross" aria-hidden="true">&times;</span><span class="ask-stop-square" aria-hidden="true"></span></button>' +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -260,10 +260,12 @@
   // (i = (i+1) % 1 always resolves to the same index), it just has
   // nothing left to rotate through until real example content exists.
   const prompts = [
-    "Ask LiveAsk AI a question..."
+    "Ask LiveAsk AI a question...",
+    "...by typing, dictating or talking!"
   ];
   let i = 0;
   const ph = panel.byId('askPlaceholder');
+  const voiceStatus = panel.byId('askVoiceStatus');
   const input = panel.byId('askInput');
   const thread = panel.byId('askThread');
   const askPanel = panel.byId('ask-panel');
@@ -274,6 +276,10 @@
   // #askRow2 directly, or they'd land after mic/send in the DOM and break
   // the always-mic/send-pinned-right layout.
   const row2Left = panel.byId('askRow2Left');
+  const uip = askPanel.querySelector('.ask-uip');
+  const sendBtn = panel.byId('askSend');
+  const micBtn = panel.byId('askMic');
+  const micLabel = panel.byId('askMicLabel');
 
 
   // 1 September 2026 correction: this used to interpolate the
@@ -307,7 +313,7 @@
         ph.textContent = prompts[i];
         ph.classList.remove('fade');
       }, 600);
-    }, 8000);
+    }, 3000);
   }
 
   function pauseRotation(){
@@ -442,6 +448,8 @@
     clearInterval(rotateTimer); rotateTimer = null;
     clearTimeout(rotateFadeTimeout);
     autoGrow();
+    updatePrimaryControlState();
+    updatePrimaryControlState();
   });
 
   // WORKER_URL is now resolved once, near DEPLOYMENT_COMPANY_NAME above —
@@ -748,7 +756,7 @@
   }
   function saveSession(){
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sessionId: sessionId, conversationHistory: conversationHistory, tourToken: tourToken }));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sessionId: sessionId, conversationHistory: conversationHistory, tourToken: tourToken, voiceAuthority: voiceAuthority }));
     } catch (e) {
       // Storage unavailable or full (private-browsing modes, quota) — the
       // conversation still works fine for this page, it just won't survive
@@ -769,15 +777,26 @@
   const urlTourToken = new URLSearchParams(window.location.search).get('tour');
   const isFreshTourEntry = !!urlTourToken && (!restoredSession || restoredSession.tourToken !== urlTourToken);
 
-  let sessionId, conversationHistory, tourToken;
+  let sessionId, conversationHistory, tourToken, voiceAuthority;
   if (isFreshTourEntry) {
     sessionId = 'web-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     conversationHistory = [];
     tourToken = urlTourToken;
+    voiceAuthority = null;
   } else {
     sessionId = (restoredSession && restoredSession.sessionId) || ('web-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));
     conversationHistory = (restoredSession && restoredSession.conversationHistory) || [];
     tourToken = (restoredSession && restoredSession.tourToken) || null;
+    voiceAuthority = (restoredSession && restoredSession.voiceAuthority) || null;
+  }
+
+  function rememberVoiceAuthority(data){
+    if (!data || !data.voiceAuthority || typeof data.voiceAuthority.token !== 'string') return;
+    voiceAuthority = {
+      token: data.voiceAuthority.token,
+      expiresAt: Number(data.voiceAuthority.expiresAt) || 0
+    };
+    saveSession();
   }
 
   // Rebuilds the thread's DOM content from a restored conversationHistory
@@ -836,7 +855,7 @@
   // 2026; extended 25 August 2026 for real cross-page destinations) ----
   // Approved semantic destination names -> real on-page targets. Keep this
   // in sync with TOUR_DESTINATIONS in index-worker.js — the Worker only
-  // ever sends a semantic name (e.g. "EXAMPLE_DESTINATION_1"), never a raw
+  // ever sends a semantic name (e.g. "LIVEASK_OVERVIEW"), never a raw
   // selector, so a destination added there needs a matching entry here
   // before it can actually move anyone's page. Each entry now carries
   // `page` (the real site path it lives on) alongside `selector` — until 25
@@ -845,18 +864,15 @@
   // page, which needs a full navigation, not just a scroll.
   //
   // CUSTOMER-SPECIFIC CONTENT — the dispatcher mechanics below that read
-  // TOUR_DESTINATION_SELECTORS[...] are reusable Core behaviour. The
-  // VALUES in this object are not — they must map to real page paths and
-  // CSS selector IDs on the actual customer's own site. Genericized
-  // 1 September 2026 (previously a tenant's actual selectors,
-  // verbatim) — every value below is a placeholder, deliberately
-  // generic, and must be replaced per deployment with that customer's
-  // real page/selector map.
+  // TOUR_DESTINATION_SELECTORS[...] are reusable Core behaviour. These
+  // values are the verified LiveAsk.au deployment map; a clean reusable
+  // Core export must replace only this map with the destination keys,
+  // page paths and selectors defined for that customer.
   const TOUR_DESTINATION_SELECTORS = {
-    EXAMPLE_DESTINATION_1: { page: '/', selector: '#example-section-1' },
-    EXAMPLE_DESTINATION_2: { page: '/', selector: '#example-section-2' },
-    ABOUT_SECTION: { page: '/', selector: '#about' },
-    EXAMPLE_DESTINATION_3: { page: '/example-page', selector: '#example-page-hero' }
+    LIVEASK_OVERVIEW: { page: '/', selector: '#liveask-overview' },
+    LIVEASK_COMPARISON: { page: '/', selector: '#comparison' },
+    LIVEASK_GOVERNANCE: { page: '/', selector: '#liveask-governance' },
+    LIVEASK_ENHANCEMENTS: { page: '/', selector: '#liveask-enhancements' }
   };
 
   // Same "treat home specially" normalization as ABOUT_HREF above, reused
@@ -991,6 +1007,7 @@
     })
       .then(function(res){ return res.json(); })
       .then(function(data){
+        rememberVoiceAuthority(data);
         beginAnswering(thinking);
         completeIdentity(thinking);
         const replyText = data.reply || "Welcome! Something went wrong setting up your tour — try refreshing, or just ask a question below.";
@@ -1377,6 +1394,7 @@
     })
       .then(function(res){ return res.json(); })
       .then(function(data){
+        rememberVoiceAuthority(data);
         beginAnswering(thinking);
         completeIdentity(thinking);
         const replyText = data.reply || "Something went wrong on my end — try again in a moment.";
@@ -1450,6 +1468,8 @@
     if(!q) return;
     input.value = '';
     input.style.height = 'auto';
+    updatePrimaryControlState();
+    updatePrimaryControlState();
     // refocusInput: true — this is the one real "the visitor was just
     // typing" path (see submitToPanel's own comment on the flag), so
     // keeping the keyboard open/refocused here is the wanted behaviour,
@@ -1457,7 +1477,6 @@
     submitToPanel(q, { showVisitorBubble: true, refocusInput: true });
   }
 
-  panel.byId('askSend').addEventListener('click', send);
   input.addEventListener('keydown', function(e){ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
 
   // ---- SearchAction deep-link handler ----
@@ -2584,26 +2603,469 @@
     if (popover.classList.contains('open')) positionPopover();
   });
 
-  // Voice input — browser-native Speech-to-Text, free, client-side.
-  // Not supported in every browser (Chrome/Edge: yes. Firefox/some mobile: patchy) — fails silently to typing.
-  const micBtn = panel.byId('askMic');
+  // ====================================================================
+  // Dictation + Realtime Voice client — 10 September 2026.
+  //
+  // Dictation remains a separate, browser-native speech-to-text aid: it
+  // writes into the ordinary textarea and never sends until the visitor
+  // presses the primary arrow. Realtime Voice uses the accepted production
+  // Worker contract: browser WebRTC media -> voiceSession:start -> SDP
+  // answer, plus a Worker WebSocket control channel for trusted lifecycle,
+  // governed-answer mediation and final transcript events.
+  // ====================================================================
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(SR){
-    const recognition = new SR();
-    recognition.lang = 'en-AU';
-    recognition.interimResults = false;
-    micBtn.addEventListener('click', function(){
-      pauseRotation();
-      micBtn.classList.add('listening');
-      recognition.start();
+  let recognition = null;
+  let dictationActive = false;
+  let dictationBase = '';
+  let dictationHadSpeech = false;
+
+  let voiceMode = 'idle';
+  let voiceGeneration = 0;
+  let voicePeer = null;
+  let voiceDataChannel = null;
+  let voiceControlSocket = null;
+  let voiceLocalStream = null;
+  let voiceRemoteAudio = null;
+  let voiceSessionId = null;
+  let voiceMuted = false;
+  let voiceEnding = false;
+  let voiceStartAbort = null;
+  let voiceAttachTimer = null;
+  let voiceIdentityEl = null;
+  const renderedVoiceFinals = new Set();
+
+  function clearVoiceUiClasses(){
+    ['is-typed', 'is-dictating', 'is-awaiting-speech', 'is-connecting', 'is-voice', 'is-speaking', 'is-muted', 'is-ending'].forEach(function(name){
+      uip.classList.remove(name);
     });
-    recognition.onresult = function(e){
-      input.value = e.results[0][0].transcript;
-      micBtn.classList.remove('listening');
-    };
-    recognition.onerror = function(){ micBtn.classList.remove('listening'); };
-    recognition.onend = function(){ micBtn.classList.remove('listening'); };
-  } else {
-    micBtn.style.display = 'none'; // graceful fallback — just type instead
   }
+
+  function setVoiceUi(mode, statusText){
+    voiceMode = mode;
+    clearVoiceUiClasses();
+    voiceStatus.textContent = statusText || '';
+    input.disabled = mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted' || mode === 'ending';
+    micBtn.disabled = mode === 'connecting' || mode === 'ending';
+
+    if (mode === 'dictating') {
+      uip.classList.add('is-dictating', 'is-awaiting-speech');
+      micBtn.setAttribute('aria-label', 'Stop dictation');
+      sendBtn.setAttribute('aria-label', 'Send dictated text');
+      return;
+    }
+    if (mode === 'connecting') {
+      uip.classList.add('is-connecting');
+      sendBtn.setAttribute('aria-label', 'Cancel Voice connection');
+      return;
+    }
+    if (mode === 'ending') {
+      uip.classList.add('is-ending');
+      sendBtn.setAttribute('aria-label', 'Ending Voice');
+      return;
+    }
+    if (mode === 'listening' || mode === 'speaking' || mode === 'muted') {
+      uip.classList.add('is-voice');
+      if (mode === 'speaking') uip.classList.add('is-speaking');
+      if (mode === 'muted') uip.classList.add('is-muted');
+      micLabel.textContent = mode === 'muted' ? 'Unmute' : 'Mute';
+      micBtn.setAttribute('aria-label', mode === 'muted' ? 'Unmute microphone' : 'Mute microphone');
+      sendBtn.setAttribute('aria-label', 'End Voice');
+      return;
+    }
+
+    micLabel.textContent = 'Dictate';
+    micBtn.setAttribute('aria-label', 'Dictate message');
+    updatePrimaryControlState();
+  }
+
+  function updatePrimaryControlState(){
+    if (voiceMode !== 'idle') return;
+    const hasText = input.value.trim().length > 0;
+    uip.classList.toggle('is-typed', hasText);
+    sendBtn.setAttribute('aria-label', hasText ? 'Send' : 'Start Voice');
+  }
+
+  function renderVoiceNotice(message){
+    thread.classList.add('active');
+    askPanel.querySelector('.ask-box').classList.add('expanded');
+    const notice = document.createElement('div');
+    notice.className = 'ask-msg ai ask-voice-notice';
+    const p = document.createElement('p');
+    const face = document.createElement('span');
+    face.className = 'ask-voice-notice-face';
+    face.setAttribute('aria-hidden', 'true');
+    face.textContent = '😯';
+    p.appendChild(face);
+    p.appendChild(document.createTextNode(message));
+    notice.appendChild(p);
+    thread.appendChild(notice);
+    showFooter();
+    maybeScrollToBottom();
+  }
+
+  function appendVoiceTranscript(role, text){
+    const clean = typeof text === 'string' ? text.trim() : '';
+    if (!clean) return;
+    const dedupeKey = role + '\u0000' + clean;
+    if (renderedVoiceFinals.has(dedupeKey)) return;
+    renderedVoiceFinals.add(dedupeKey);
+    if (renderedVoiceFinals.size > 40) {
+      const first = renderedVoiceFinals.values().next().value;
+      renderedVoiceFinals.delete(first);
+    }
+
+    thread.classList.add('active');
+    askPanel.querySelector('.ask-box').classList.add('expanded');
+    if (role === 'user') {
+      const visitor = document.createElement('div');
+      visitor.className = 'ask-msg visitor';
+      visitor.innerHTML = '<p></p>';
+      visitor.querySelector('p').textContent = clean;
+      thread.appendChild(visitor);
+      conversationHistory.push({ role: 'user', content: clean });
+    } else {
+      const assistant = createAiMessageEl(clean, isFirstAiReply());
+      thread.appendChild(assistant);
+      conversationHistory.push({ role: 'assistant', content: clean });
+      if (voiceIdentityEl) {
+        completeIdentity(voiceIdentityEl);
+        voiceIdentityEl = null;
+      }
+    }
+    saveSession();
+    showFooter();
+    maybeScrollToBottom();
+  }
+
+  function stopLocalVoiceMedia(){
+    if (voiceAttachTimer) { clearTimeout(voiceAttachTimer); voiceAttachTimer = null; }
+    const socket = voiceControlSocket;
+    const channel = voiceDataChannel;
+    const peer = voicePeer;
+    const stream = voiceLocalStream;
+    const audio = voiceRemoteAudio;
+    voiceControlSocket = null;
+    voiceDataChannel = null;
+    voicePeer = null;
+    voiceLocalStream = null;
+    voiceRemoteAudio = null;
+    try { if (socket && socket.readyState < 2) socket.close(1000, 'Visitor ended Voice'); } catch (e) {}
+    try { if (channel) channel.close(); } catch (e) {}
+    if (stream) stream.getTracks().forEach(function(track){ track.stop(); });
+    try { if (peer) peer.close(); } catch (e) {}
+    if (audio) {
+      try { audio.pause(); } catch (e) {}
+      audio.srcObject = null;
+      audio.remove();
+    }
+  }
+
+  async function finishVoice(options){
+    options = options || {};
+    if (voiceEnding) return;
+    voiceEnding = true;
+    voiceGeneration += 1;
+    if (voiceStartAbort) { voiceStartAbort.abort(); voiceStartAbort = null; }
+    const endingSessionId = voiceSessionId;
+    voiceSessionId = null;
+    if (options.showEnding !== false && voiceMode !== 'idle') setVoiceUi('ending', 'Ending…');
+    stopLocalVoiceMedia();
+
+    if (endingSessionId) {
+      try {
+        await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sessionId: sessionId, voiceSession: 'end', voiceSessionId: endingSessionId }),
+          keepalive: true
+        });
+      } catch (e) { /* control-channel close also releases the lease */ }
+    }
+    voiceMuted = false;
+    voiceEnding = false;
+    setVoiceUi('idle');
+    if (options.notice) renderVoiceNotice(options.notice);
+  }
+
+  function voiceFailureMessage(reason){
+    if (reason === 'engagement_authority_invalid') return 'Voice needs a fresh Text turn first. Ask one typed question, then try Voice again.';
+    if (reason === 'voice_session_already_active') return 'Voice is already active for this conversation. You can keep typing here while it resets.';
+    if (/exhaust|entitlement|quota|denied/i.test(reason || '')) return 'Voice time is unavailable right now. Text is still ready here.';
+    return 'Voice could not connect. Text is still ready here.';
+  }
+
+  function handleVoiceControlMessage(event){
+    let data;
+    try { data = JSON.parse(event.data); } catch (e) { return; }
+    if (data.type === 'sideband.attached') {
+      if (voiceAttachTimer) { clearTimeout(voiceAttachTimer); voiceAttachTimer = null; }
+      if (!voiceMuted) setVoiceUi('listening', 'Listening…');
+      return;
+    }
+    if (data.type === 'voice.state.speaking') {
+      if (!voiceMuted && voiceMode !== 'speaking') setVoiceUi('listening', 'Listening…');
+      return;
+    }
+    if (data.type === 'voice.state.responding') {
+      if (data.responding) {
+        setVoiceUi('speaking', 'Speaking…');
+        if (!voiceIdentityEl) {
+          voiceIdentityEl = beginIdentity();
+          setTimeout(function(){ if (voiceIdentityEl) beginAnswering(voiceIdentityEl); }, 350);
+        }
+      } else if (!voiceMuted) {
+        setVoiceUi('listening', 'Listening…');
+      }
+      return;
+    }
+    if (data.type === 'voice.transcript.visitor_final') {
+      appendVoiceTranscript('user', data.text);
+      return;
+    }
+    if (data.type === 'voice.transcript.assistant_final') {
+      appendVoiceTranscript('assistant', data.text);
+      return;
+    }
+    if (data.type === 'voice.terminated') {
+      finishVoice({ force: true, notice: voiceFailureMessage(data.reason) });
+      return;
+    }
+    if (data.type === 'voice.turn.incomplete' || data.type === 'voice.turn.ended') {
+      if (voiceIdentityEl) { completeIdentity(voiceIdentityEl); voiceIdentityEl = null; }
+      if (!voiceMuted) setVoiceUi('listening', 'Listening…');
+      return;
+    }
+    if (data.type === 'sideband.failed' || data.type === 'sideband.error') {
+      finishVoice({ force: true, notice: 'Voice lost its secure control connection. Text is still ready here.' });
+    }
+  }
+
+  function workerWebSocketUrl(data){
+    const url = new URL(WORKER_URL);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = '/voice/control';
+    url.search = new URLSearchParams({
+      call_id: data.providerCallId,
+      voice_session_id: data.voiceSessionId,
+      engagement_id: sessionId
+    }).toString();
+    return url.toString();
+  }
+
+  async function startVoice(){
+    if (voiceMode !== 'idle') return;
+    if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      renderVoiceNotice('Voice is not available in this browser. Text is still ready here.');
+      return;
+    }
+    if (!voiceAuthority || !voiceAuthority.token || voiceAuthority.expiresAt <= Date.now()) {
+      renderVoiceNotice('Start with one typed question, then Voice will be ready for this conversation.');
+      return;
+    }
+
+    pauseRotation();
+    clearInterval(rotateTimer); rotateTimer = null;
+    clearTimeout(rotateFadeTimeout);
+    setVoiceUi('connecting', 'Connecting…');
+    const generation = ++voiceGeneration;
+    voiceEnding = false;
+    voiceStartAbort = new AbortController();
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (generation !== voiceGeneration) { stream.getTracks().forEach(function(track){ track.stop(); }); return; }
+      voiceLocalStream = stream;
+
+      const peer = new RTCPeerConnection();
+      voicePeer = peer;
+      const audio = document.createElement('audio');
+      audio.className = 'ask-voice-audio';
+      audio.autoplay = true;
+      audio.playsInline = true;
+      shadowRoot.appendChild(audio);
+      voiceRemoteAudio = audio;
+      peer.ontrack = function(event){
+        audio.srcObject = event.streams[0];
+        const play = audio.play();
+        if (play && play.catch) play.catch(function(){});
+      };
+      stream.getTracks().forEach(function(track){ peer.addTrack(track, stream); });
+
+      const channel = peer.createDataChannel('oai-events');
+      voiceDataChannel = channel;
+      channel.addEventListener('message', function(event){
+        let providerEvent;
+        try { providerEvent = JSON.parse(event.data); } catch (e) { return; }
+        if (providerEvent.type === 'output_audio_buffer.started') setVoiceUi('speaking', 'Speaking…');
+        if (providerEvent.type === 'output_audio_buffer.stopped' && !voiceMuted) setVoiceUi('listening', 'Listening…');
+      });
+
+      peer.addEventListener('connectionstatechange', function(){
+        if (peer !== voicePeer || voiceEnding) return;
+        if (peer.connectionState === 'failed' || peer.connectionState === 'closed') {
+          finishVoice({ force: true, notice: 'Voice connection ended. Text is still ready here.' });
+        }
+      });
+
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          voiceSession: 'start',
+          voiceAuthorityToken: voiceAuthority.token,
+          sdpOffer: peer.localDescription.sdp,
+          textHistory: conversationHistory
+        }),
+        signal: voiceStartAbort.signal
+      });
+      const data = await response.json().catch(function(){ return {}; });
+      if (!response.ok || !data.ok) throw new Error(data.reason || ('voice_start_http_' + response.status));
+      if (generation !== voiceGeneration) {
+        voiceSessionId = data.voiceSessionId;
+        await finishVoice({ force: true, showEnding: false });
+        return;
+      }
+      voiceSessionId = data.voiceSessionId;
+      await peer.setRemoteDescription({ type: 'answer', sdp: data.sdpAnswer });
+
+      const control = new WebSocket(workerWebSocketUrl(data));
+      voiceControlSocket = control;
+      control.addEventListener('message', handleVoiceControlMessage);
+      control.addEventListener('close', function(){
+        if (control === voiceControlSocket && !voiceEnding && voiceMode !== 'idle') {
+          finishVoice({ force: true, notice: 'Voice connection ended. Text is still ready here.' });
+        }
+      });
+      control.addEventListener('error', function(){
+        if (control === voiceControlSocket && !voiceEnding) {
+          finishVoice({ force: true, notice: 'Voice could not open its secure control connection. Text is still ready here.' });
+        }
+      });
+      voiceAttachTimer = setTimeout(function(){
+        if (voiceMode === 'connecting') finishVoice({ force: true, notice: 'Voice took too long to connect. Text is still ready here.' });
+      }, 10000);
+    } catch (err) {
+      if (generation !== voiceGeneration || err.name === 'AbortError') return;
+      const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+      const message = denied ? 'Microphone access was denied. Text is still ready here.' : voiceFailureMessage(err.message);
+      await finishVoice({ force: true, notice: message });
+    } finally {
+      voiceStartAbort = null;
+    }
+  }
+
+  function toggleVoiceMute(){
+    if (!voiceLocalStream || (voiceMode !== 'listening' && voiceMode !== 'speaking' && voiceMode !== 'muted')) return;
+    voiceMuted = !voiceMuted;
+    voiceLocalStream.getAudioTracks().forEach(function(track){ track.enabled = !voiceMuted; });
+    setVoiceUi(voiceMuted ? 'muted' : 'listening', voiceMuted ? 'Microphone muted' : 'Listening…');
+  }
+
+  function startDictation(){
+    if (!recognition || dictationActive || voiceMode !== 'idle') return;
+    pauseRotation();
+    clearInterval(rotateTimer); rotateTimer = null;
+    clearTimeout(rotateFadeTimeout);
+    dictationBase = input.value.trimEnd();
+    dictationHadSpeech = false;
+    dictationActive = true;
+    voiceStatus.textContent = 'You are dictating to text here';
+    setVoiceUi('dictating', 'You are dictating to text here');
+    try { recognition.start(); }
+    catch (e) { dictationActive = false; setVoiceUi('idle'); }
+  }
+
+  if (SR) {
+    recognition = new SR();
+    recognition.lang = (navigator.languages && navigator.languages[0]) || navigator.language || document.documentElement.lang || 'en-AU';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = function(event){
+      let spoken = '';
+      for (let resultIndex = 0; resultIndex < event.results.length; resultIndex += 1) {
+        spoken += event.results[resultIndex][0].transcript;
+        if (resultIndex < event.results.length - 1) spoken += ' ';
+      }
+      spoken = spoken.trim();
+      if (spoken) {
+        dictationHadSpeech = true;
+        uip.classList.remove('is-awaiting-speech');
+        input.value = (dictationBase ? dictationBase + ' ' : '') + spoken;
+        ph.classList.add('fade');
+        autoGrow();
+      }
+    };
+    recognition.onspeechstart = function(){
+      dictationHadSpeech = true;
+      uip.classList.remove('is-awaiting-speech');
+    };
+    recognition.onerror = function(event){
+      uip.dataset.dictationError = event.error || 'unknown';
+      if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        const reason = event.error === 'not-allowed' || event.error === 'service-not-allowed'
+          ? 'Microphone access or the browser speech service was denied.'
+          : event.error === 'audio-capture'
+            ? 'The browser could not access a microphone.'
+            : event.error === 'network'
+              ? 'The browser speech service could not connect.'
+              : event.error === 'language-not-supported'
+                ? 'The browser speech service does not support this language.'
+                : 'Dictation stopped unexpectedly.';
+        renderVoiceNotice(reason + ' Your existing text has been kept.');
+      }
+    };
+    recognition.onend = function(){
+      dictationActive = false;
+      setVoiceUi('idle');
+      autoGrow();
+    };
+  } else {
+    micBtn.style.display = 'none';
+  }
+
+  micBtn.addEventListener('click', function(){
+    if (voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted') {
+      toggleVoiceMute();
+      return;
+    }
+    if (dictationActive) {
+      try { recognition.stop(); } catch (e) {}
+      return;
+    }
+    startDictation();
+  });
+
+  sendBtn.addEventListener('click', function(){
+    if (voiceMode === 'connecting' || voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted' || voiceMode === 'ending') {
+      finishVoice({ showEnding: true });
+      return;
+    }
+    if (dictationActive) {
+      try { recognition.stop(); } catch (e) {}
+      if (input.value.trim()) send();
+      return;
+    }
+    if (input.value.trim()) send();
+    else startVoice();
+  });
+
+  window.addEventListener('pagehide', function(){
+    if (!voiceSessionId) return;
+    const endingSessionId = voiceSessionId;
+    voiceSessionId = null;
+    stopLocalVoiceMedia();
+    try {
+      fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessionId: sessionId, voiceSession: 'end', voiceSessionId: endingSessionId }),
+        keepalive: true
+      });
+    } catch (e) {}
+  });
+
+  updatePrimaryControlState();
 })();
