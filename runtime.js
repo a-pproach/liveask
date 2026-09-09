@@ -2632,6 +2632,7 @@
   let voiceStartAbort = null;
   let voiceAttachTimer = null;
   let voiceIdentityEl = null;
+  let pendingAssistantVoiceTranscript = '';
   const renderedVoiceFinals = new Set();
 
   function clearVoiceUiClasses(){
@@ -2737,6 +2738,18 @@
     maybeScrollToBottom();
   }
 
+  function bufferAssistantVoiceTranscript(text){
+    const clean = typeof text === 'string' ? text.trim() : '';
+    if (clean) pendingAssistantVoiceTranscript = clean;
+  }
+
+  function flushAssistantVoiceTranscript(){
+    if (!pendingAssistantVoiceTranscript) return;
+    const text = pendingAssistantVoiceTranscript;
+    pendingAssistantVoiceTranscript = '';
+    appendVoiceTranscript('assistant', text);
+  }
+
   function stopLocalVoiceMedia(){
     if (voiceAttachTimer) { clearTimeout(voiceAttachTimer); voiceAttachTimer = null; }
     const socket = voiceControlSocket;
@@ -2768,6 +2781,8 @@
     if (voiceStartAbort) { voiceStartAbort.abort(); voiceStartAbort = null; }
     const endingSessionId = voiceSessionId;
     voiceSessionId = null;
+    if (options.notice) pendingAssistantVoiceTranscript = '';
+    else flushAssistantVoiceTranscript();
     if (options.showEnding !== false && voiceMode !== 'idle') setVoiceUi('ending', 'Ending…');
     stopLocalVoiceMedia();
 
@@ -2788,7 +2803,7 @@
   }
 
   function voiceFailureMessage(reason){
-    if (reason === 'engagement_authority_invalid') return 'Voice needs a fresh Text turn first. Ask one typed question, then try Voice again.';
+    if (reason === 'engagement_authority_invalid') return 'Voice permission expired before connection. Please try Voice again.';
     if (reason === 'voice_session_already_active') return 'Voice is already active for this conversation. You can keep typing here while it resets.';
     if (/exhaust|entitlement|quota|denied/i.test(reason || '')) return 'Voice time is unavailable right now. Text is still ready here.';
     return 'Voice could not connect. Text is still ready here.';
@@ -2823,7 +2838,10 @@
       return;
     }
     if (data.type === 'voice.transcript.assistant_final') {
-      appendVoiceTranscript('assistant', data.text);
+      // The governed answer reaches the browser before OpenAI begins its
+      // audible rendition. Hold it until playback ends so the interface
+      // never looks as though Voice is reading a pre-written chat reply.
+      bufferAssistantVoiceTranscript(data.text);
       return;
     }
     if (data.type === 'voice.terminated') {
@@ -2852,17 +2870,28 @@
     return url.toString();
   }
 
+  async function ensureVoiceAuthority(signal){
+    if (voiceAuthority && voiceAuthority.token && voiceAuthority.expiresAt > Date.now()) return;
+    const response = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sessionId: sessionId, voiceAuthority: 'bootstrap' }),
+      signal: signal
+    });
+    const data = await response.json().catch(function(){ return {}; });
+    if (!response.ok || !data.ok) throw new Error(data.reason || ('voice_authority_http_' + response.status));
+    rememberVoiceAuthority(data);
+    if (!voiceAuthority || !voiceAuthority.token || voiceAuthority.expiresAt <= Date.now()) {
+      throw new Error('engagement_authority_unavailable');
+    }
+  }
+
   async function startVoice(){
     if (voiceMode !== 'idle') return;
     if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       renderVoiceNotice('Voice is not available in this browser. Text is still ready here.');
       return;
     }
-    if (!voiceAuthority || !voiceAuthority.token || voiceAuthority.expiresAt <= Date.now()) {
-      renderVoiceNotice('Start with one typed question, then Voice will be ready for this conversation.');
-      return;
-    }
-
     pauseRotation();
     clearInterval(rotateTimer); rotateTimer = null;
     clearTimeout(rotateFadeTimeout);
@@ -2872,6 +2901,8 @@
     voiceStartAbort = new AbortController();
 
     try {
+      await ensureVoiceAuthority(voiceStartAbort.signal);
+      if (generation !== voiceGeneration) return;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (generation !== voiceGeneration) { stream.getTracks().forEach(function(track){ track.stop(); }); return; }
       voiceLocalStream = stream;
@@ -2897,7 +2928,10 @@
         let providerEvent;
         try { providerEvent = JSON.parse(event.data); } catch (e) { return; }
         if (providerEvent.type === 'output_audio_buffer.started') setVoiceUi('speaking', 'Speaking…');
-        if (providerEvent.type === 'output_audio_buffer.stopped' && !voiceMuted) setVoiceUi('listening', 'Listening…');
+        if (providerEvent.type === 'output_audio_buffer.stopped') {
+          flushAssistantVoiceTranscript();
+          if (!voiceMuted) setVoiceUi('listening', 'Listening…');
+        }
       });
 
       peer.addEventListener('connectionstatechange', function(){
