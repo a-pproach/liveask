@@ -292,20 +292,52 @@
     { kind: 'email', label: 'Enter your email address', term: /\b(?:email|e-mail)(?:\s+address)?\b/i },
     { kind: 'phone', label: 'Enter your phone number', term: /\b(?:phone|mobile)(?:\s+(?:number|no\.?))?\b/i },
     { kind: 'name', label: 'Enter your name', term: /\b(?:full\s+)?name\b/i },
-    { kind: 'code', label: 'Enter your verification code', term: /\b(?:verification|validation|security|one[- ]time)\s+code\b|\bOTP\b/i }
+    // A direct request may say only "enter the code" after the preceding
+    // clause has already established that it is a verification code.
+    { kind: 'code', label: 'Enter your verification code', term: /\b(?:verification|validation|security|one[- ]time)\s+code\b|\bOTP\b|\b(?:the\s+)?code\b/i }
   ];
 
   function detectInputInstruction(text){
     const value = String(text || '');
-    // Require both an input/request verb and a recognised field. This keeps
-    // ordinary explanatory mentions of an email, name or phone number from
-    // being mistaken for an instruction.
-    if (!/\b(?:enter|type|provide|share|tell me|send me|confirm|may i have|may we (?:start with|have)|can i have|could i have|what(?:'s| is) your)\b/i.test(value)) return null;
-    const rule = INPUT_INSTRUCTION_RULES.find(function(candidate){ return candidate.term.test(value); });
-    if (!rule) return null;
+    // Find explicit request phrases first, then select the field nearest to
+    // each request. This prevents an earlier explanatory noun from winning
+    // over the real next action — for example, "send a verification code to
+    // that email; please enter the code" must resolve to CODE, not EMAIL.
+    const requestPattern = /\b(?:enter|type|provide|share|tell me|send me|confirm|may i have|may we (?:start with|have)|can i have|could i have|what(?:'s| is) your)\b/ig;
+    const requests = [];
+    let requestMatch;
+    while ((requestMatch = requestPattern.exec(value)) !== null) {
+      requests.push({ index: requestMatch.index, end: requestPattern.lastIndex });
+    }
+    if (!requests.length) return null;
+
+    let selected = null;
+    requests.forEach(function(request){
+      // Stop at the next explicit request so each candidate field belongs to
+      // one instruction rather than leaking in from a later instruction.
+      const nextRequest = requests.find(function(candidate){ return candidate.index > request.index; });
+      const end = nextRequest ? nextRequest.index : value.length;
+      const clause = value.slice(request.end, end);
+      INPUT_INSTRUCTION_RULES.forEach(function(candidate, ruleOrder){
+        const termMatch = candidate.term.exec(clause);
+        if (!termMatch) return;
+        const choice = {
+          rule: candidate,
+          requestIndex: request.index,
+          distance: termMatch.index,
+          ruleOrder: ruleOrder
+        };
+        if (!selected || choice.requestIndex > selected.requestIndex ||
+            (choice.requestIndex === selected.requestIndex && choice.distance < selected.distance) ||
+            (choice.requestIndex === selected.requestIndex && choice.distance === selected.distance && choice.ruleOrder < selected.ruleOrder)) {
+          selected = choice;
+        }
+      });
+    });
+    if (!selected) return null;
     return {
-      kind: rule.kind,
-      label: rule.label,
+      kind: selected.rule.kind,
+      label: selected.rule.label,
       isError: /\b(?:invalid|incorrect|wrong|didn['’]?t match|not valid|try again)\b/i.test(value)
     };
   }
