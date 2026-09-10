@@ -149,30 +149,14 @@
 
 .ask-uip{background:#fff;border:1px solid var(--line);border-radius:28px;box-shadow:0 2px 0 rgba(29,42,58,.05);display:flex;flex-direction:column}
 /* ============================================================
-   Composer geometry. Row padding restored to the known-good
-   accepted reference value (1 September 2026) — the 30/31 August
-   passes had changed this specific property to an invented, asymmetric
-   16px/6px split purely to hit the UIP brief's approximate ≈96px
-   height target, which silently broke the caret's vertical alignment
-   against the absolutely-positioned, centered placeholder/logo: with
-   symmetric original padding, the flex-end-anchored textarea's single
-   line of content and the centered placeholder/logo happened to align;
-   shrinking only the bottom padding shifted the row's own centre point
-   without the textarea moving to match, since it isn't part of the
-   same absolute-centering system. Restored to the original padding
-   here — align-items:flex-end itself was never the problem and was
-   never changed. The resulting total height is a secondary consequence
-   of getting this right, not a target being solved for:
-     14px (Row 1 top padding, restored)
-   + 20.24px (line-height: 18.4px x 1.1)
-   + 14px (Row 1 bottom padding, restored — this alone is what
-           separates Row 1 from Row 2 now; no separate invented
-           "gap" value is needed once this is symmetric)
-   + 42px (Row 2 control zone)
-   + 12px (Row 2's own bottom padding)
-   = 102.24px.
+   Compact two-row composer geometry — Stage 1 UX review, 10 September
+   2026. The caret typography and exact 80x20 logo geometry remain locked;
+   only the surrounding vertical whitespace is reduced. The verified
+   resting UIP is approximately 94px high at the mobile review width.
+   Typed content remains free to expand naturally, up to the existing
+   four-line/6.6em cap.
    ============================================================ */
-.ask-input-row{position:relative;display:flex;align-items:flex-end;gap:6px;padding:14px 16px}
+.ask-input-row{position:relative;display:flex;align-items:flex-end;gap:6px;padding:6px 16px 2px}
 /* Typed text — UIP refinement: 16px/450/#1f2937/1.35, replacing the
    previous 19.55px/var(--ink)/1.1. Must read with more authority than
    placeholder text, not grey and apologetic. 16 x 1.35 = 21.6px line
@@ -220,7 +204,7 @@
    different presentation and must never be added to this textarea.
    ============================================================ */
 .ask-input-row textarea{flex:1;border:none;outline:none;font-family:var(--body);font-size:18.4px;font-weight:400;color:#1f2937;caret-color:#1f2937;background:transparent;position:relative;z-index:2;resize:none;max-height:6.6em;line-height:1.1;padding:8px 0 8px 85px;overflow-y:auto;transition:padding-left .6s ease}
-.ask-input-row:has(#askPlaceholder.fade) textarea{padding-left:0}
+.ask-input-row.has-text textarea{padding-left:0}
 /* Placeholder matched to the same 16px size as typed text — deliberately
    NOT smaller — so switching between placeholder and typed content never
    causes a visible size jump. "May remain softer" (per the brief) is
@@ -232,8 +216,10 @@
    visible jump. Font-size (16px) and the "softer via color, not size"
    choice from the UIP pass both stay unchanged — neither was in
    conflict. */
-.ask-fake-placeholder{position:absolute;left:115px;top:50%;transform:translateY(-50%) translateZ(0);will-change:contents;font-family:var(--body);font-size:18.4px;color:var(--ink-soft);pointer-events:none;transition:opacity .6s ease;z-index:1;max-width:calc(100% - 131px);line-height:1.1;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.ask-fake-placeholder{position:absolute;left:106px;right:10px;top:50%;transform:translateY(-50%) translateZ(0);will-change:contents;font-family:var(--body);font-size:18.4px;color:var(--ink-soft);pointer-events:none;transition:opacity .6s ease;z-index:1;line-height:1.1;display:block;white-space:nowrap;overflow:hidden}
 .ask-fake-placeholder.fade{opacity:0}
+.ask-fake-placeholder--instruction{color:#0A8442}
+.ask-fake-placeholder--instruction-error{color:#B3261E}
 .ask-voice-status{display:none;position:absolute;left:115px;right:16px;top:50%;transform:translateY(-50%);font-family:var(--body);font-size:18.4px;font-style:italic;font-weight:400;line-height:1.1;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:3}
 /* Drift resolved: source pages disagreed here (index.html: nowrap;
    liveask/ai-tips: normal). liveask-index.html and ai-tips-index.html
@@ -248,7 +234,7 @@
    in this file's header comment about this rule documents the original
    Stage A extraction and is left as-is. */
 .ask-liveask-inline{position:absolute;left:16px;top:50%;transform:translateY(-50%);height:20px;width:auto;z-index:2;pointer-events:none;transition:opacity .6s ease}
-.ask-input-row:has(#askPlaceholder.fade) .ask-liveask-inline{opacity:0}
+.ask-input-row.has-text .ask-liveask-inline{opacity:0}
 
 /* ============================================================
    UNIVERSAL animated-logo cursor-sync capability, 1 September 2026.
@@ -347,12 +333,10 @@
 .ask-voice-audio{display:none}
 .ask-voice-notice-face{display:inline-block;margin-right:5px}
 
-/* Row 2: content-led, not a fixed zone — height comes from its tallest
-   child (the 40px primary control) plus this padding, not a hardcoded row
-   height. Desktop composer total, computed explicitly:
-   16 (Row 1 top) + 22 (line-height) + 6 (Row 1→2 gap, see above)
-   + 40 (primary control) + 12 (this bottom padding) = 96px. */
-.ask-row2{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:5px;padding:0 16px 12px}
+/* Row 2 stays content-led and vertically centres every control. Its 40px
+   primary control plus 8px bottom breathing room completes the compact
+   resting geometry without fixing the row to a brittle hardcoded height. */
+.ask-row2{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:5px;padding:0 16px 8px}
 .ask-row2-left{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px;min-width:0;min-height:40px}
 .ask-row2-right{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto}
 .ask-row2-plus{flex-shrink:0;width:34px;height:34px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;user-select:none;cursor:pointer;background:none;border:none;padding:0;position:relative;z-index:61}
@@ -367,9 +351,10 @@
    ordinary visitor UI and the Tour/Admin engine share rendering code.
    ============================================================ */
 .ask-panel-scrim{display:none;position:fixed;inset:0;background:transparent;z-index:59}
-.ask-panel-scrim.open{background:rgba(29,42,58,.35)}
+.ask-panel-scrim.open{display:block;background:transparent}
 .ask-popover{display:none;position:absolute;width:min(320px,90vw);max-height:60vh;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(29,42,58,.18);padding:8px;z-index:60}
 .ask-popover.open{display:block}
+.ask-popover--root-menu{width:max-content;min-width:210px;max-width:min(280px,calc(100vw - 32px))}
 .ask-popover-section-label{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--logo-blue);line-height:1.2;padding:0 10px 12px}
 .ask-popover-section-label--first{padding-top:12px}
 .ask-popover-divider{height:1px;background:#D8DEE5;margin:16px 4px}
@@ -462,6 +447,10 @@
 .ask-msg.ai li{margin-bottom:4px}
 .ask-msg.ai a{color:var(--logo-blue)}
 .ask-msg.ai strong{font-weight:600}
+.ask-msg.ai.ask-instruction-active p{color:#A76200}
+.ask-msg.ai.ask-instruction-error p{color:#B3261E}
+.ask-msg.ai.ask-instruction-attention p{animation:ask-instruction-pulse .8s ease-in-out 4}
+@keyframes ask-instruction-pulse{0%,100%{opacity:1}50%{opacity:.42}}
 
 .ask-msg.ai .ask-privacynotice{font-size:13px;color:#5a6472;opacity:.9;margin:0 0 10px;white-space:normal;font-style:normal}
 .ask-msg.ai .ask-privacynotice a{color:var(--logo-blue);text-decoration:underline}
@@ -597,28 +586,15 @@
 }
 
 @media (max-width: 640px) {
-  /* Full-width bottom-sheet treatment removed (30 August 2026 UIP
-     refinement) — the + menu and every shared secondary panel now use
-     the same upward/flip-fallback positioning as desktop (see
-     positionPopover() in runtime.js), anchored to the + button and
-     content-led in width/height, not a page-width sheet. The base
-     .ask-popover rule's width:min(320px,90vw) already keeps this
-     comfortably within narrow viewports without a mobile-specific
-     override. */
+  /* The + menu and secondary panels remain content-led rather than a
+     full-width bottom sheet. positionPopover() overlays them on the UIP
+     and aligns the bottom borders at every viewport size. */
   .ask-popover-rating-btn{width:40px;height:40px;font-size:14.72px}
   .ask-popover-rating-row{padding:12px 6px 2px}
 
-  /* Composer geometry — mobile. The original reference source never
-     had a separate mobile row-padding value at all — one uniform
-     14px/16px applied everywhere. The mobile-specific override that
-     used to live here (16px 16px 12px) was invented during the same
-     30/31 August passes as the desktop asymmetry, for the same reason,
-     and is removed for the same reason: restoring the original,
-     symmetric desktop rule to apply uniformly here too is what keeps
-     the caret's alignment against the centered placeholder/logo
-     correct, on this breakpoint as much as any other. Resulting total:
-     14 (Row 1 top) + 20.24 (line-height) + 14 (Row 1 bottom) + 48
-     (send button) + 12 (Row 2 bottom padding) = 108.24px. */
+  /* Mobile uses the same compact row spacing. The logo and caret metrics
+     remain unchanged; only the default prompt type may scale slightly so
+     both approved rotating lines remain single-line on narrow devices. */
   .ask-uip{border-radius:30px}
   /* line-height reverted to 1.1 here too (30 August 2026 caret
      correction). Font-size corrected to 18.4px (31 August 2026,
@@ -627,5 +603,10 @@
      was never a separate mobile value for either to preserve. */
   .ask-input-row textarea,
   .ask-fake-placeholder{font-size:18.4px;line-height:1.1}
+  .ask-fake-placeholder{font-size:clamp(16.8px,4.5vw,18.4px)}
   .ask-send{width:40px;height:40px}
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ask-msg.ai.ask-instruction-attention p{animation:none}
 }

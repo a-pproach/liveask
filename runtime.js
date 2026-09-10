@@ -281,6 +281,65 @@
   const micBtn = panel.byId('askMic');
   const micLabel = panel.byId('askMicLabel');
 
+  // Contextual data-entry guidance. A normal instruction is amber; an
+  // instruction following a validation failure is red. This is deliberately
+  // a frontend presentation aid only: it does not alter the conversation,
+  // submit data, or change any Worker/API behaviour.
+  let activeInputInstructionEl = null;
+  let inputInstructionAttentionTimer = null;
+  const INPUT_INSTRUCTION_RULES = [
+    { kind: 'name-business', label: 'Enter your name and business name', term: /\bname\s+and\s+business\s+name\b/i },
+    { kind: 'email', label: 'Enter your email address', term: /\b(?:email|e-mail)(?:\s+address)?\b/i },
+    { kind: 'phone', label: 'Enter your phone number', term: /\b(?:phone|mobile)(?:\s+(?:number|no\.?))?\b/i },
+    { kind: 'name', label: 'Enter your name', term: /\b(?:full\s+)?name\b/i },
+    { kind: 'code', label: 'Enter your verification code', term: /\b(?:verification|validation|security|one[- ]time)\s+code\b|\bOTP\b/i }
+  ];
+
+  function detectInputInstruction(text){
+    const value = String(text || '');
+    // Require both an input/request verb and a recognised field. This keeps
+    // ordinary explanatory mentions of an email, name or phone number from
+    // being mistaken for an instruction.
+    if (!/\b(?:enter|type|provide|share|tell me|send me|confirm|may i have|may we (?:start with|have)|can i have|could i have|what(?:'s| is) your)\b/i.test(value)) return null;
+    const rule = INPUT_INSTRUCTION_RULES.find(function(candidate){ return candidate.term.test(value); });
+    if (!rule) return null;
+    return {
+      kind: rule.kind,
+      label: rule.label,
+      isError: /\b(?:invalid|incorrect|wrong|didn['’]?t match|not valid|try again)\b/i.test(value)
+    };
+  }
+
+  function completeInputInstruction(){
+    clearTimeout(inputInstructionAttentionTimer);
+    inputInstructionAttentionTimer = null;
+    if (activeInputInstructionEl) {
+      activeInputInstructionEl.classList.remove('ask-instruction-active', 'ask-instruction-attention', 'ask-instruction-error');
+      activeInputInstructionEl = null;
+    }
+    ph.classList.remove('ask-fake-placeholder--instruction', 'ask-fake-placeholder--instruction-error');
+  }
+
+  function activateInputInstruction(text, messageEl){
+    const instruction = detectInputInstruction(text);
+    if (!instruction) return false;
+    completeInputInstruction();
+    activeInputInstructionEl = messageEl || null;
+    if (activeInputInstructionEl) {
+      activeInputInstructionEl.classList.add('ask-instruction-active', 'ask-instruction-attention');
+      if (instruction.isError) activeInputInstructionEl.classList.add('ask-instruction-error');
+    }
+    ph.textContent = instruction.label;
+    ph.classList.remove('fade');
+    ph.classList.add('ask-fake-placeholder--instruction');
+    if (instruction.isError) ph.classList.add('ask-fake-placeholder--instruction-error');
+    inputInstructionAttentionTimer = setTimeout(function(){
+      if (activeInputInstructionEl) activeInputInstructionEl.classList.remove('ask-instruction-attention');
+      inputInstructionAttentionTimer = null;
+    }, 3200);
+    return true;
+  }
+
 
   // 1 September 2026 correction: this used to interpolate the
   // customer's business name and force a specific 3-line manual break
@@ -292,6 +351,7 @@
   // no viewport branching) — consistent with everything else rather
   // than a one-off special case.
   function setFinalPlaceholder(){
+    ph.classList.remove('ask-fake-placeholder--instruction', 'ask-fake-placeholder--instruction-error');
     ph.textContent = 'Ask another question';
   }
 
@@ -437,7 +497,9 @@
     input.style.height = input.scrollHeight + 'px';
   }
   input.addEventListener('input', function(){
-    ph.classList.toggle('fade', input.value.length > 0);
+    const hasText = input.value.length > 0;
+    ph.classList.toggle('fade', hasText);
+    input.closest('.ask-input-row').classList.toggle('has-text', hasText);
     // Real bug fix, 7 August 2026: rotation-stop only ever lived inside the
     // 'focus' event handler — but clicking into an ALREADY-focused element
     // (which it is, after page-load autofocus) never fires a new focus
@@ -817,6 +879,7 @@
   // — they'd be wrong the moment there's already a real conversation on
   // record, collapsed or not.
   function replaySession(){
+    let replayLastAssistantEl = null;
     conversationHistory.forEach(function(m){
       if (m.role === 'user') {
         const v = document.createElement('div');
@@ -830,12 +893,17 @@
         a.innerHTML = '<p></p>';
         a.querySelector('p').textContent = m.content;
         thread.appendChild(a);
+        replayLastAssistantEl = a;
       }
     });
     clearInterval(rotateTimer); rotateTimer = null;
     clearTimeout(rotateFadeTimeout);
     setFinalPlaceholder();
     ph.classList.remove('fade');
+    const replayLastTurn = conversationHistory.length ? conversationHistory[conversationHistory.length - 1] : null;
+    if (replayLastTurn && replayLastTurn.role === 'assistant') {
+      activateInputInstruction(replayLastTurn.content, replayLastAssistantEl);
+    }
     // Persistent chat-copy control — restored on a same-tab reload/nav same
     // as everything else in this replay, so it's not missing until the next
     // reply happens to land.
@@ -1310,6 +1378,10 @@
   // should never look like the visitor typed words they didn't type.
   function submitToPanel(promptText, opts){
     opts = opts || {};
+    // The visitor has acted on the currently highlighted request. Restore
+    // that historical message to normal styling before rendering the next
+    // turn (which may itself contain a fresh instruction).
+    completeInputInstruction();
     pauseRotation();
     thread.classList.add('active');
     askPanel.querySelector('.ask-box').classList.add('expanded');
@@ -1349,6 +1421,7 @@
     clearTimeout(rotateFadeTimeout);
     setFinalPlaceholder();
     ph.classList.remove('fade');
+    input.closest('.ask-input-row').classList.remove('has-text');
 
     // The array actually persisted to sessionStorage and resent on every
     // future turn gets a redacted placeholder, never the real PIN.
@@ -1419,6 +1492,7 @@
         const quickReplyChoices = validQuickReplies(data);
         renderRow2(quickReplyChoices);
         thread.appendChild(a);
+        activateInputInstruction(replyText, a);
         showFooter();
         maybeScrollToBottom();
         // Custom AI Tours: only ever present on a tour guest's turn, and
@@ -1467,6 +1541,7 @@
     const q = input.value.trim();
     if(!q) return;
     input.value = '';
+    input.closest('.ask-input-row').classList.remove('has-text');
     input.style.height = 'auto';
     updatePrimaryControlState();
     updatePrimaryControlState();
@@ -1675,57 +1750,31 @@
     popover.classList.remove('open');
     scrim.classList.remove('open');
     plusBtn.setAttribute('aria-expanded', 'false');
+    popover.classList.remove('ask-popover--root-menu');
     adminAuthed = null;
   }
 
-  // Anchors the popover to the ACTUAL current position of the + button,
-  // computed via JS rather than a pure-CSS "bottom:100% of the nearest
-  // positioned ancestor" trick — real live-test find building this: the
-  // popover's positioning parent is .ask-box, whose height changes with the
-  // conversation thread's own height (collapsed vs expanded, short vs long
-  // history), so a fixed CSS anchor drifted away from the + button itself
-  // and, on this site's top-pinned panel (unlike a bottom-anchored chat
-  // composer, .ask-panel sits at position:sticky;top:0), could open mostly
-  // above the visible viewport. Opens DOWNWARD from the + here for that
-  // same reason — there's reliably more room below the composer on this
-  // layout than above it. Skipped entirely on mobile — the bottom-sheet
-  // media query fully owns position there (fixed to the viewport edges),
-  // and a leftover inline top/left would otherwise outrank it (inline
-  // style beats a class selector) — so both are explicitly cleared first.
-  // UIP refinement, 30 August 2026: the + menu and every shared
-  // secondary panel must visually originate from the control that
-  // invoked them (the + button) rather than the previous behaviour —
-  // downward-anchored on desktop, an unrelated full-width bottom sheet
-  // on mobile. Both are gone; this one function now handles every
-  // viewport size the same way.
-  //
-  // Genuine design tension worth recording, not silently avoided:
-  // .ask-panel is position:sticky;top:0, so once it's actually pinned
-  // to the top of the viewport, "always open upward" would clip the
-  // popover above the visible area. Resolved with a flip fallback —
-  // measure the popover's own (already-rendered) height, open upward
-  // if there's room above the button, fall back to opening downward
-  // if there isn't. This is the same familiar pattern ordinary
-  // dropdowns use for exactly this situation, which also happens to
-  // match the brief's own "familiarity hacking" principle directly.
+  // Stage 1 correction, 10 September 2026: every secondary surface now
+  // overlays the LiveAsk box and shares the UIP's bottom edge. It no longer
+  // opens below the UIP and consumes the host website. Horizontal placement
+  // remains anchored to the real + control and is clamped inside the box.
   function positionPopover(){
     const boxRect = askPanel.querySelector('.ask-box').getBoundingClientRect();
     const btnRect = plusBtn.getBoundingClientRect();
     const popoverRect = popover.getBoundingClientRect();
-    const gap = 8;
+    const edgeGap = 8;
+    // Leave the invoking + control visible immediately to the menu's left;
+    // this preserves the familiar press-again-to-close option without the
+    // icon colliding with the menu's final row.
+    const requestedLeft = btnRect.right - boxRect.left + edgeGap;
+    const maximumLeft = Math.max(edgeGap, boxRect.width - popoverRect.width - edgeGap);
 
-    popover.style.left = Math.max(0, btnRect.left - boxRect.left) + 'px';
-
-    const spaceAbove = btnRect.top - gap;
-    const fitsAbove = popoverRect.height <= spaceAbove;
-
-    if (fitsAbove) {
-      popover.style.bottom = (boxRect.bottom - btnRect.top + gap) + 'px';
-      popover.style.top = 'auto';
-    } else {
-      popover.style.top = (btnRect.bottom - boxRect.top + gap) + 'px';
-      popover.style.bottom = 'auto';
-    }
+    popover.style.left = Math.max(edgeGap, Math.min(requestedLeft, maximumLeft)) + 'px';
+    // Secondary controls belong to the LiveAsk surface, not the host page.
+    // Overlay the UIP and align the two bottom borders instead of opening
+    // beneath it and consuming the customer's website area.
+    popover.style.bottom = '0px';
+    popover.style.top = 'auto';
   }
 
   // Renders one "screen" into the shared popover — a title, an optional
@@ -1738,6 +1787,7 @@
   // own beyond what the caller already tracks (rating/comment).
   function renderSecondaryPanel(title, buildFn, opts){
     opts = opts || {};
+    popover.classList.toggle('ask-popover--root-menu', opts.rootMenu === true);
     popover.innerHTML = '';
     if (opts.onBack) {
       const back = document.createElement('button');
@@ -2581,7 +2631,7 @@
         renderChoiceButtons(body, items.map(function(it){ return { label: it.title, value: it }; }), runQuickMenuItem);
         positionPopover();
       });
-    });
+    }, { rootMenu: true });
   }
 
   plusBtn.addEventListener('click', function(e){
@@ -3028,6 +3078,7 @@
         dictationHadSpeech = true;
         uip.classList.remove('is-awaiting-speech');
         input.value = (dictationBase ? dictationBase + ' ' : '') + spoken;
+        input.closest('.ask-input-row').classList.add('has-text');
         ph.classList.add('fade');
         autoGrow();
       }
