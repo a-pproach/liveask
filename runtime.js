@@ -286,7 +286,10 @@
   // a frontend presentation aid only: it does not alter the conversation,
   // submit data, or change any Worker/API behaviour.
   let activeInputInstructionEl = null;
+  let activeInputInstruction = null;
   let inputInstructionAttentionTimer = null;
+  let voicePromptEnabled = false;
+  let voicePromptButton = null;
   const INPUT_INSTRUCTION_RULES = [
     { kind: 'name-business', label: 'Enter your name and business name', term: /\bname\s+and\s+business\s+name\b/i },
     { kind: 'email', label: 'Enter your email address', term: /\b(?:email|e-mail)(?:\s+address)?\b/i },
@@ -299,6 +302,19 @@
 
   function detectInputInstruction(text){
     const value = String(text || '');
+    // These two governed prompts use natural conversational wording rather
+    // than repeating the field name after the imperative. Resolve them
+    // explicitly before the general request/field matcher.
+    if (/\bwho should i say is enquiring\b/i.test(value)) {
+      return { kind: 'name', label: 'Enter name here', isError: false };
+    }
+    if (/\b(?:verification|validation|security|one[- ]time)\s+code\b[\s\S]{0,180}\b(?:enter|type|provide)\s+(?:it|that|the code)\b/i.test(value)) {
+      return {
+        kind: 'code',
+        label: 'Enter validation code here',
+        isError: /\b(?:code|entry|value)\s+(?:is|was)\s+(?:invalid|incorrect|wrong|not valid)\b|\b(?:invalid|incorrect|wrong)\s+(?:code|entry|value)\b|\bdidn['’]?t match\b/i.test(value)
+      };
+    }
     // Find explicit request phrases first, then select the field nearest to
     // each request. This prevents an earlier explanatory noun from winning
     // over the real next action — for example, "send a verification code to
@@ -335,10 +351,15 @@
       });
     });
     if (!selected) return null;
+    const fieldErrorPattern = new RegExp(
+      '(?:' + selected.rule.term.source + ')[\\s\\S]{0,48}\\b(?:invalid|incorrect|wrong|didn[’\\\']?t match|not valid)\\b' +
+      '|\\b(?:invalid|incorrect|wrong)\\b[\\s\\S]{0,48}(?:' + selected.rule.term.source + ')',
+      'i'
+    );
     return {
       kind: selected.rule.kind,
       label: selected.rule.label,
-      isError: /\b(?:invalid|incorrect|wrong|didn['’]?t match|not valid|try again)\b/i.test(value)
+      isError: fieldErrorPattern.test(value)
     };
   }
 
@@ -350,12 +371,50 @@
       activeInputInstructionEl = null;
     }
     ph.classList.remove('ask-fake-placeholder--instruction', 'ask-fake-placeholder--instruction-error');
+    activeInputInstruction = null;
+    renderVoicePromptControl();
+  }
+
+  function renderVoicePromptControl(){
+    if (!activeInputInstruction) {
+      if (voicePromptButton) voicePromptButton.remove();
+      voicePromptButton = null;
+      return;
+    }
+    if (!voicePromptButton) {
+      voicePromptButton = document.createElement('button');
+      voicePromptButton.type = 'button';
+      voicePromptButton.className = 'ask-voice-prompt-btn';
+      voicePromptButton.addEventListener('click', function(){
+        if (!voicePromptEnabled) {
+          voicePromptEnabled = true;
+          renderVoicePromptControl();
+          startVoice({ instruction: activeInputInstruction });
+        } else {
+          voicePromptEnabled = false;
+          renderVoicePromptControl();
+        }
+        if (!voicePromptEnabled && (voiceMode === 'connecting' || voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted')) {
+          finishVoice({ showEnding: true });
+        }
+      });
+      row2Left.appendChild(voicePromptButton);
+    }
+    voicePromptButton.textContent = voicePromptEnabled ? 'Turn Voice Off' : 'Turn Voice On';
+    voicePromptButton.classList.toggle('is-off', voicePromptEnabled);
+    voicePromptButton.setAttribute('aria-pressed', voicePromptEnabled ? 'true' : 'false');
+    voicePromptButton.setAttribute('aria-label', voicePromptEnabled ? 'Turn Voice off.' : 'Turn Voice on and speak this instruction.');
   }
 
   function activateInputInstruction(text, messageEl){
     const instruction = detectInputInstruction(text);
     if (!instruction) return false;
+    clearInterval(rotateTimer);
+    rotateTimer = null;
+    clearTimeout(rotateFadeTimeout);
+    rotateFadeTimeout = null;
     completeInputInstruction();
+    activeInputInstruction = instruction;
     activeInputInstructionEl = messageEl || null;
     if (activeInputInstructionEl) {
       activeInputInstructionEl.classList.add('ask-instruction-active', 'ask-instruction-attention');
@@ -365,6 +424,7 @@
     ph.classList.remove('fade');
     ph.classList.add('ask-fake-placeholder--instruction');
     if (instruction.isError) ph.classList.add('ask-fake-placeholder--instruction-error');
+    renderVoicePromptControl();
     inputInstructionAttentionTimer = setTimeout(function(){
       if (activeInputInstructionEl) activeInputInstructionEl.classList.remove('ask-instruction-attention');
       inputInstructionAttentionTimer = null;
@@ -2800,6 +2860,7 @@
     thread.classList.add('active');
     askPanel.querySelector('.ask-box').classList.add('expanded');
     if (role === 'user') {
+      completeInputInstruction();
       const visitor = document.createElement('div');
       visitor.className = 'ask-msg visitor';
       visitor.innerHTML = '<p></p>';
@@ -2810,6 +2871,7 @@
       const assistant = createAiMessageEl(clean, isFirstAiReply());
       thread.appendChild(assistant);
       conversationHistory.push({ role: 'assistant', content: clean });
+      activateInputInstruction(clean, assistant);
       if (voiceIdentityEl) {
         completeIdentity(voiceIdentityEl);
         voiceIdentityEl = null;
@@ -2879,6 +2941,8 @@
       } catch (e) { /* control-channel close also releases the lease */ }
     }
     voiceMuted = false;
+    voicePromptEnabled = false;
+    renderVoicePromptControl();
     voiceEnding = false;
     setVoiceUi('idle');
     if (options.notice) renderVoiceNotice(options.notice);
@@ -2968,9 +3032,12 @@
     }
   }
 
-  async function startVoice(){
+  async function startVoice(options){
+    options = options || {};
     if (voiceMode !== 'idle') return;
     if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      voicePromptEnabled = false;
+      renderVoicePromptControl();
       renderVoiceNotice('Voice is not available in this browser. Text is still ready here.');
       return;
     }
@@ -3006,6 +3073,27 @@
 
       const channel = peer.createDataChannel('oai-events');
       voiceDataChannel = channel;
+      const promptInstruction = options.instruction && options.instruction.label
+        ? { kind: options.instruction.kind, label: options.instruction.label }
+        : null;
+      channel.addEventListener('open', function(){
+        if (!promptInstruction || !voicePromptEnabled || channel !== voiceDataChannel || channel.readyState !== 'open') return;
+        const eventId = 'liveask_voice_prompt_' + Date.now().toString(36);
+        channel.send(JSON.stringify({
+          event_id: eventId,
+          type: 'response.create',
+          response: {
+            conversation: 'none',
+            metadata: {
+              liveask_purpose: 'structured_instruction',
+              liveask_instruction_kind: promptInstruction.kind
+            },
+            output_modalities: ['audio'],
+            input: [],
+            instructions: 'Say exactly this instruction, with no embellishment: "' + promptInstruction.label + '"'
+          }
+        }));
+      });
       channel.addEventListener('message', function(event){
         let providerEvent;
         try { providerEvent = JSON.parse(event.data); } catch (e) { return; }
@@ -3166,7 +3254,7 @@
       return;
     }
     if (input.value.trim()) send();
-    else startVoice();
+    else startVoice({ instruction: voicePromptEnabled ? activeInputInstruction : null });
   });
 
   window.addEventListener('pagehide', function(){

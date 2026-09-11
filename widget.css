@@ -338,6 +338,9 @@
    resting geometry without fixing the row to a brittle hardcoded height. */
 .ask-row2{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:5px;padding:0 16px 8px}
 .ask-row2-left{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px;min-width:0;min-height:40px}
+.ask-voice-prompt-btn{display:flex;height:27px;padding:0 10px;align-items:center;justify-content:center;border:1px solid #8ed6ac;border-radius:14px;background:#e3f7eb;color:#0a8442;box-shadow:0 1px 2px rgba(35,45,58,.08);font:inherit;font-size:11px;font-weight:500;line-height:1;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.ask-voice-prompt-btn.is-off{border-color:#e2bd68;background:#fff4d6;color:#805800}
+.ask-voice-prompt-btn:focus-visible{outline:2px solid var(--logo-blue);outline-offset:2px}
 .ask-row2-right{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto}
 .ask-row2-plus{flex-shrink:0;width:34px;height:34px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;user-select:none;cursor:pointer;background:none;border:none;padding:0;position:relative;z-index:61}
 .ask-row2-plus:hover{color:var(--navy)}
