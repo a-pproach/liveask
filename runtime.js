@@ -128,7 +128,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260912-voice-prompt-stage2-3';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
