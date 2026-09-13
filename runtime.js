@@ -1075,17 +1075,28 @@
   // selector string; now a destination can point at a genuinely different
   // page, which needs a full navigation, not just a scroll.
   //
-  // CUSTOMER-SPECIFIC CONTENT — the dispatcher mechanics below that read
-  // TOUR_DESTINATION_SELECTORS[...] are reusable Core behaviour. These
-  // values are the verified LiveAsk.au deployment map; a clean reusable
-  // Core export must replace only this map with the destination keys,
-  // page paths and selectors defined for that customer.
-  const TOUR_DESTINATION_SELECTORS = {
-    LIVEASK_OVERVIEW: { page: '/', selector: '#liveask-overview' },
-    LIVEASK_COMPARISON: { page: '/', selector: '#comparison' },
-    LIVEASK_GOVERNANCE: { page: '/', selector: '#liveask-governance' },
-    LIVEASK_ENHANCEMENTS: { page: '/', selector: '#liveask-enhancements' }
-  };
+  // Package A: the Worker owns the tenant destination authority. The
+  // browser receives navigation fields only; approved context never leaves
+  // the governed backend.
+  let TOUR_DESTINATION_SELECTORS = {};
+  fetch(WORKER_URL + '/tour-destinations')
+    .then(function(response){ return response.ok ? response.json() : null; })
+    .then(function(data){
+      if (!data || typeof data !== 'object') return;
+      var mapped = {};
+      Object.keys(data).forEach(function(semanticId){
+        var destination = data[semanticId];
+        if (!destination || !destination.page_path || !destination.dom_selector) return;
+        mapped[semanticId] = {
+          page: destination.page_path,
+          selector: destination.dom_selector
+        };
+      });
+      TOUR_DESTINATION_SELECTORS = mapped;
+    })
+    .catch(function(){
+      // Tours fail closed when deployment configuration is unavailable.
+    });
 
   // Same "treat home specially" normalization as ABOUT_HREF above, reused
   // here to compare a destination's configured `page` against where the
