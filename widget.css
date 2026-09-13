@@ -118,7 +118,7 @@
    Ask panel — structure, byte-identical across all three original
    source pages except where noted.
    ============================================================ */
-.ask-panel{padding:10px 0;background:var(--paper);position:sticky;top:0;z-index:50;border-bottom:1px solid transparent;transition:border-color .2s}
+.ask-panel{padding:10px 0;background:#fff;position:sticky;top:0;z-index:50;border-bottom:1px solid transparent;transition:border-color .2s}
 .ask-panel.pinned{border-bottom-color:var(--ink-soft)}
 .ask-box{width:100%;margin:0 auto;position:relative;display:flex;flex-direction:column;gap:2px}
 /* Floating X fully removed (31 August 2026, Conversation Panel
@@ -156,7 +156,7 @@
    Typed content remains free to expand naturally, up to the existing
    four-line/6.6em cap.
    ============================================================ */
-.ask-input-row{position:relative;display:flex;align-items:flex-end;gap:6px;padding:6px 16px 2px}
+.ask-input-row{position:relative;display:flex;align-items:flex-end;gap:6px;min-height:48px;padding:6px 16px 2px}
 /* Typed text — UIP refinement: 16px/450/#1f2937/1.35, replacing the
    previous 19.55px/var(--ink)/1.1. Must read with more authority than
    placeholder text, not grey and apologetic. 16 x 1.35 = 21.6px line

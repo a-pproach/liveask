@@ -128,7 +128,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260912-voice-prompt-stage2-3';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260912-canonical-conversation-1';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -281,10 +281,10 @@
   const micBtn = panel.byId('askMic');
   const micLabel = panel.byId('askMicLabel');
 
-  // Contextual data-entry guidance. A normal instruction is amber; an
-  // instruction following a validation failure is red. This is deliberately
-  // a frontend presentation aid only: it does not alter the conversation,
-  // submit data, or change any Worker/API behaviour.
+  // Contextual data-entry guidance. A normal instruction is green; an
+  // instruction following a validation failure is red. Presentation state
+  // also carries stable canonical identity when its fixed workflow prompt is
+  // spoken, so the visual and spoken forms cannot become duplicate turns.
   let activeInputInstructionEl = null;
   let activeInputInstruction = null;
   let inputInstructionAttentionTimer = null;
@@ -294,10 +294,10 @@
     { kind: 'name-business', label: 'Enter your name and business name', term: /\bname\s+and\s+business\s+name\b/i },
     { kind: 'email', label: 'Enter your email address', term: /\b(?:email|e-mail)(?:\s+address)?\b/i },
     { kind: 'phone', label: 'Enter your phone number', term: /\b(?:phone|mobile)(?:\s+(?:number|no\.?))?\b/i },
-    { kind: 'name', label: 'Enter your name', term: /\b(?:full\s+)?name\b/i },
+    { kind: 'name', label: 'Enter name here', term: /\b(?:full\s+)?name\b/i },
     // A direct request may say only "enter the code" after the preceding
     // clause has already established that it is a verification code.
-    { kind: 'code', label: 'Enter your verification code', term: /\b(?:verification|validation|security|one[- ]time)\s+code\b|\bOTP\b|\b(?:the\s+)?code\b/i }
+    { kind: 'code', label: 'Enter validation code here', term: /\b(?:verification|validation|security|one[- ]time)\s+code\b|\bOTP\b|\b(?:the\s+)?code\b/i }
   ];
 
   function detectInputInstruction(text){
@@ -897,6 +897,7 @@
   // one sitting keeps talking to the same AI with the same history; a new
   // tab or a later visit starts clean, same as today.
   const SESSION_KEY = 'liveask_session_v1';
+  let canonicalSyncTimer = null;
   function loadSession(){
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
@@ -916,6 +917,7 @@
       // conversation still works fine for this page, it just won't survive
       // a navigation. Fail silent rather than break the chat over it.
     }
+    scheduleCanonicalSync();
   }
 
   const restoredSession = loadSession();
@@ -942,6 +944,56 @@
     conversationHistory = (restoredSession && restoredSession.conversationHistory) || [];
     tourToken = (restoredSession && restoredSession.tourToken) || null;
     voiceAuthority = (restoredSession && restoredSession.voiceAuthority) || null;
+  }
+
+  function uniqueConversationId(prefix){
+    return prefix + ':' + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+  }
+
+  function conversationMessage(role, content, metadata){
+    metadata = metadata || {};
+    return {
+      role: role,
+      content: content,
+      event_id: metadata.event_id || metadata.eventId || uniqueConversationId(role === 'user' ? 'text-user' : 'text-assistant'),
+      turn_id: metadata.turn_id || metadata.turnId || uniqueConversationId('turn'),
+      modality: metadata.modality || 'text',
+      source: metadata.source || (role === 'user' ? 'visitor' : 'sonnet'),
+      event_type: metadata.event_type || metadata.eventType || 'message',
+      status: metadata.status || 'completed',
+      provider_event_id: metadata.provider_event_id || metadata.providerEventId || null,
+      provider_item_id: metadata.provider_item_id || metadata.providerItemId || null,
+      provider_response_id: metadata.provider_response_id || metadata.providerResponseId || null,
+      authority_ref: metadata.authority_ref || metadata.authorityRef || null,
+      voice_session_id: metadata.voice_session_id || metadata.voiceSessionId || null,
+      client_created_at: metadata.client_created_at || Date.now()
+    };
+  }
+
+  // Migrate pre-ledger sessionStorage entries without discarding an active
+  // visitor's conversation. Their stable position becomes the idempotency
+  // fallback; every new entry receives a true UUID.
+  conversationHistory = conversationHistory.map(function(message, index){
+    if (message && message.event_id && message.turn_id) return message;
+    const role = message && message.role === 'user' ? 'user' : 'assistant';
+    return conversationMessage(role, message && message.content ? message.content : '', {
+      event_id: 'legacy-event:' + index + ':' + sessionId,
+      turn_id: 'legacy-turn:' + Math.floor(index / 2) + ':' + sessionId,
+      source: 'browser_reconciliation'
+    });
+  });
+
+  function scheduleCanonicalSync(){
+    if (!sessionId || !conversationHistory || !conversationHistory.length) return;
+    clearTimeout(canonicalSyncTimer);
+    canonicalSyncTimer = setTimeout(function(){
+      canonicalSyncTimer = null;
+      fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessionId: sessionId, conversationSync: true, events: conversationHistory })
+      }).catch(function(){ /* retained locally and retried on the next save */ });
+    }, 80);
   }
 
   function rememberVoiceAuthority(data){
@@ -1172,7 +1224,9 @@
         completeIdentity(thinking);
         const replyText = data.reply || "Welcome! Something went wrong setting up your tour — try refreshing, or just ask a question below.";
         const showPrivacyNotice = isFirstAiReply();
-        conversationHistory.push({ role: 'assistant', content: replyText });
+        conversationHistory.push(conversationMessage('assistant', replyText, data.canonicalEvent || {
+          source: 'liveask_workflow', event_type: 'workflow_prompt'
+        }));
         saveSession();
         const a = document.createElement('div');
         a.className = 'ask-msg ai';
@@ -1517,7 +1571,11 @@
 
     // The array actually persisted to sessionStorage and resent on every
     // future turn gets a redacted placeholder, never the real PIN.
-    conversationHistory.push({ role: 'user', content: isPinAnswer ? '[PIN entered]' : promptText });
+    const textTurnId = uniqueConversationId('turn');
+    conversationHistory.push(conversationMessage('user', isPinAnswer ? '[PIN entered]' : promptText, {
+      turn_id: textTurnId,
+      source: 'visitor'
+    }));
     saveSession();
 
     const thinking = beginIdentity();
@@ -1555,7 +1613,7 @@
     fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sessionId: sessionId, messages: outgoingMessages, tourToken: tourToken })
+      body: JSON.stringify({ sessionId: sessionId, messages: outgoingMessages, canonicalHistory: conversationHistory, tourToken: tourToken })
     })
       .then(function(res){ return res.json(); })
       .then(function(data){
@@ -1566,7 +1624,10 @@
         // Must be checked BEFORE this reply is pushed to conversationHistory
         // below — see isFirstAiReply().
         const showPrivacyNotice = isFirstAiReply();
-        conversationHistory.push({ role: 'assistant', content: replyText });
+        conversationHistory.push(conversationMessage('assistant', replyText, data.canonicalEvent || {
+          turn_id: textTurnId,
+          source: 'sonnet'
+        }));
         saveSession();
         const a = document.createElement('div');
         a.className = 'ask-msg ai';
@@ -1584,7 +1645,8 @@
         const quickReplyChoices = validQuickReplies(data);
         renderRow2(quickReplyChoices);
         thread.appendChild(a);
-        activateInputInstruction(replyText, a);
+        if (quickReplyChoices.length) completeInputInstruction();
+        else activateInputInstruction(replyText, a);
         showFooter();
         maybeScrollToBottom();
         // Custom AI Tours: only ever present on a tour guest's turn, and
@@ -1614,7 +1676,7 @@
         const a = document.createElement('div');
         a.className = 'ask-msg ai';
         a.innerHTML = '<p></p>';
-        a.querySelector('p').textContent = "That's taking longer than it should — try again, or jump straight to a door below.";
+        a.querySelector('p').textContent = "That's taking longer than it should — please try again in a moment.";
         thread.appendChild(a);
         renderRow2([]);
         showFooter();
@@ -1779,10 +1841,19 @@
       // (e.g. giving their name after Contact) continues naturally through
       // the normal, already-tested flow — no separate Claude call for
       // this fixed opener itself, no cost, no drift, no AI improvisation.
-      conversationHistory.push({ role: 'assistant', content: cfg.reply });
+      const navTurnId = uniqueConversationId('turn');
+      conversationHistory.push(conversationMessage('assistant', cfg.reply, {
+        turn_id: navTurnId,
+        source: 'liveask_workflow',
+        event_type: 'workflow_prompt'
+      }));
       saveSession();
 
-      setFinalPlaceholder();
+      // Contact and every other deterministic data-entry opener must engage
+      // the same Row 1 instruction/Voice Prompt treatment immediately, not
+      // only after a later model-authored request.
+      const hasInputInstruction = activateInputInstruction(cfg.reply, a);
+      if (!hasInputInstruction) setFinalPlaceholder();
       ph.classList.remove('fade');
       // Real bug found live on mobile, 25 August 2026: this handler used to
       // end with a forced refocus of the text input (see this file's git
@@ -2075,7 +2146,9 @@
     if (isFirstAiReply()) a.insertBefore(buildPrivacyNoticeEl(), replyP);
     replyP.textContent = replyText;
     thread.appendChild(a);
-    conversationHistory.push({ role: 'assistant', content: replyText });
+    conversationHistory.push(conversationMessage('assistant', replyText, {
+      source: 'liveask_workflow', event_type: 'workflow_prompt'
+    }));
     saveSession();
     // 'What can you help with?' replaces the previous 'Find the right
     // service' (1 September 2026 correction) — that phrasing assumed a
@@ -2254,7 +2327,9 @@
       a.innerHTML = '<p></p>';
       a.querySelector('p').textContent = data.reply;
       thread.appendChild(a);
-      conversationHistory.push({ role: 'assistant', content: data.reply });
+      conversationHistory.push(conversationMessage('assistant', data.reply, data.canonicalEvent || {
+        source: 'liveask_workflow', event_type: 'workflow_prompt'
+      }));
       saveSession();
       renderRow2(data.quickReplies || []);
       showFooter();
@@ -2774,7 +2849,7 @@
   let voiceStartAbort = null;
   let voiceAttachTimer = null;
   let voiceIdentityEl = null;
-  let pendingAssistantVoiceTranscript = '';
+  let pendingAssistantVoiceTranscripts = [];
   const renderedVoiceFinals = new Set();
 
   function clearVoiceUiClasses(){
@@ -2846,15 +2921,19 @@
     maybeScrollToBottom();
   }
 
-  function appendVoiceTranscript(role, text){
+  function appendVoiceTranscript(role, text, metadata){
     const clean = typeof text === 'string' ? text.trim() : '';
     if (!clean) return;
-    const dedupeKey = role + '\u0000' + clean;
-    if (renderedVoiceFinals.has(dedupeKey)) return;
-    renderedVoiceFinals.add(dedupeKey);
-    if (renderedVoiceFinals.size > 40) {
-      const first = renderedVoiceFinals.values().next().value;
-      renderedVoiceFinals.delete(first);
+    const eventIdentity = metadata && (metadata.event_id || metadata.eventId || metadata.provider_event_id || metadata.providerEventId);
+    if (eventIdentity && conversationHistory.some(function(message){ return message.event_id === eventIdentity; })) return;
+    if (eventIdentity) {
+      const dedupeKey = role + '\u0000' + eventIdentity;
+      if (renderedVoiceFinals.has(dedupeKey)) return;
+      renderedVoiceFinals.add(dedupeKey);
+      if (renderedVoiceFinals.size > 80) {
+        const first = renderedVoiceFinals.values().next().value;
+        renderedVoiceFinals.delete(first);
+      }
     }
 
     thread.classList.add('active');
@@ -2866,11 +2945,15 @@
       visitor.innerHTML = '<p></p>';
       visitor.querySelector('p').textContent = clean;
       thread.appendChild(visitor);
-      conversationHistory.push({ role: 'user', content: clean });
+      conversationHistory.push(conversationMessage('user', clean, Object.assign({
+        modality: 'voice', source: 'visitor', voice_session_id: voiceSessionId
+      }, metadata || {})));
     } else {
       const assistant = createAiMessageEl(clean, isFirstAiReply());
       thread.appendChild(assistant);
-      conversationHistory.push({ role: 'assistant', content: clean });
+      conversationHistory.push(conversationMessage('assistant', clean, Object.assign({
+        modality: 'voice', source: 'realtime', voice_session_id: voiceSessionId
+      }, metadata || {})));
       activateInputInstruction(clean, assistant);
       if (voiceIdentityEl) {
         completeIdentity(voiceIdentityEl);
@@ -2882,16 +2965,15 @@
     maybeScrollToBottom();
   }
 
-  function bufferAssistantVoiceTranscript(text){
+  function bufferAssistantVoiceTranscript(text, metadata){
     const clean = typeof text === 'string' ? text.trim() : '';
-    if (clean) pendingAssistantVoiceTranscript = clean;
+    if (clean) pendingAssistantVoiceTranscripts.push({ text: clean, metadata: metadata || {} });
   }
 
   function flushAssistantVoiceTranscript(){
-    if (!pendingAssistantVoiceTranscript) return;
-    const text = pendingAssistantVoiceTranscript;
-    pendingAssistantVoiceTranscript = '';
-    appendVoiceTranscript('assistant', text);
+    if (!pendingAssistantVoiceTranscripts.length) return;
+    const pending = pendingAssistantVoiceTranscripts.shift();
+    appendVoiceTranscript('assistant', pending.text, pending.metadata);
   }
 
   function stopLocalVoiceMedia(){
@@ -2925,8 +3007,8 @@
     if (voiceStartAbort) { voiceStartAbort.abort(); voiceStartAbort = null; }
     const endingSessionId = voiceSessionId;
     voiceSessionId = null;
-    if (options.notice) pendingAssistantVoiceTranscript = '';
-    else flushAssistantVoiceTranscript();
+    if (options.notice) pendingAssistantVoiceTranscripts = [];
+    else while (pendingAssistantVoiceTranscripts.length) flushAssistantVoiceTranscript();
     if (options.showEnding !== false && voiceMode !== 'idle') setVoiceUi('ending', 'Ending…');
     stopLocalVoiceMedia();
 
@@ -2980,14 +3062,14 @@
       return;
     }
     if (data.type === 'voice.transcript.visitor_final') {
-      appendVoiceTranscript('user', data.text);
+      appendVoiceTranscript('user', data.text, data);
       return;
     }
     if (data.type === 'voice.transcript.assistant_final') {
       // The governed answer reaches the browser before OpenAI begins its
       // audible rendition. Hold it until playback ends so the interface
       // never looks as though Voice is reading a pre-written chat reply.
-      bufferAssistantVoiceTranscript(data.text);
+      bufferAssistantVoiceTranscript(data.text, data);
       return;
     }
     if (data.type === 'voice.terminated') {
@@ -3074,26 +3156,13 @@
       const channel = peer.createDataChannel('oai-events');
       voiceDataChannel = channel;
       const promptInstruction = options.instruction && options.instruction.label
-        ? { kind: options.instruction.kind, label: options.instruction.label }
-        : null;
-      channel.addEventListener('open', function(){
-        if (!promptInstruction || !voicePromptEnabled || channel !== voiceDataChannel || channel.readyState !== 'open') return;
-        const eventId = 'liveask_voice_prompt_' + Date.now().toString(36);
-        channel.send(JSON.stringify({
-          event_id: eventId,
-          type: 'response.create',
-          response: {
-            conversation: 'none',
-            metadata: {
-              liveask_purpose: 'structured_instruction',
-              liveask_instruction_kind: promptInstruction.kind
-            },
-            output_modalities: ['audio'],
-            input: [],
-            instructions: 'Say exactly this instruction, with no embellishment: "' + promptInstruction.label + '"'
+        ? {
+            kind: options.instruction.kind,
+            label: options.instruction.label,
+            turnId: ([].concat(conversationHistory).reverse().find(function(message){ return message.role === 'assistant'; }) || {}).turn_id || uniqueConversationId('turn'),
+            eventId: ([].concat(conversationHistory).reverse().find(function(message){ return message.role === 'assistant'; }) || {}).event_id || uniqueConversationId('workflow')
           }
-        }));
-      });
+        : null;
       channel.addEventListener('message', function(event){
         let providerEvent;
         try { providerEvent = JSON.parse(event.data); } catch (e) { return; }
@@ -3121,7 +3190,9 @@
           voiceSession: 'start',
           voiceAuthorityToken: voiceAuthority.token,
           sdpOffer: peer.localDescription.sdp,
-          textHistory: conversationHistory
+          textHistory: conversationHistory,
+          canonicalHistory: conversationHistory,
+          structuredInstruction: promptInstruction && voicePromptEnabled ? promptInstruction : null
         }),
         signal: voiceStartAbort.signal
       });

@@ -110,7 +110,7 @@
   };
 
   var runtimeScript = document.createElement('script');
-  runtimeScript.src = baseUrl + 'runtime.js?v=20260912-voice-prompt-stage2-3';
+  runtimeScript.src = baseUrl + 'runtime.js?v=20260912-canonical-conversation-1';
   runtimeScript.async = false; // preserve load-then-execute ordering relative to the config handoff above
   document.body.appendChild(runtimeScript);
 })();
