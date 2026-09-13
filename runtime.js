@@ -1853,6 +1853,7 @@
       // the same Row 1 instruction/Voice Prompt treatment immediately, not
       // only after a later model-authored request.
       const hasInputInstruction = activateInputInstruction(cfg.reply, a);
+      if (hasInputInstruction) syncActiveWorkflowToVoice(activeInputInstruction, true);
       if (!hasInputInstruction) setFinalPlaceholder();
       ph.classList.remove('fade');
       // Real bug found live on mobile, 25 August 2026: this handler used to
@@ -2850,7 +2851,43 @@
   let voiceAttachTimer = null;
   let voiceIdentityEl = null;
   let pendingAssistantVoiceTranscripts = [];
+  let pendingVoiceWorkflowSync = null;
   const renderedVoiceFinals = new Set();
+
+  function voiceSessionIsOpen(){
+    return voiceMode === 'connecting' || voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted';
+  }
+
+  function syncActiveWorkflowToVoice(instruction, announce){
+    if (!instruction || !voiceSessionIsOpen()) return;
+    // Voice may have been started from the ordinary blue control before a
+    // governed prompt appeared. In that case the contextual pill must show
+    // the real current state (Turn Voice Off), not misleadingly offer to
+    // start a second Voice session.
+    if (!voicePromptEnabled) {
+      voicePromptEnabled = true;
+      renderVoicePromptControl();
+    }
+    const sourceTurn = [].concat(conversationHistory).reverse().find(function(message){
+      return message && message.role === 'assistant' && detectInputInstruction(message.content) && detectInputInstruction(message.content).kind === instruction.kind;
+    });
+    const payload = {
+      type: 'workflow.sync',
+      announce: announce !== false,
+      instruction: {
+        kind: instruction.kind,
+        label: instruction.label,
+        turnId: (sourceTurn && sourceTurn.turn_id) || uniqueConversationId('turn'),
+        eventId: (sourceTurn && sourceTurn.event_id) || uniqueConversationId('workflow')
+      }
+    };
+    if (voiceControlSocket && voiceControlSocket.readyState === WebSocket.OPEN) {
+      voiceControlSocket.send(JSON.stringify(payload));
+      pendingVoiceWorkflowSync = null;
+    } else {
+      pendingVoiceWorkflowSync = payload;
+    }
+  }
 
   function clearVoiceUiClasses(){
     ['is-typed', 'is-dictating', 'is-awaiting-speech', 'is-connecting', 'is-voice', 'is-speaking', 'is-muted', 'is-ending'].forEach(function(name){
@@ -2954,7 +2991,7 @@
       conversationHistory.push(conversationMessage('assistant', clean, Object.assign({
         modality: 'voice', source: 'realtime', voice_session_id: voiceSessionId
       }, metadata || {})));
-      activateInputInstruction(clean, assistant);
+      if (activateInputInstruction(clean, assistant)) syncActiveWorkflowToVoice(activeInputInstruction, false);
       if (voiceIdentityEl) {
         completeIdentity(voiceIdentityEl);
         voiceIdentityEl = null;
@@ -2988,6 +3025,7 @@
     voicePeer = null;
     voiceLocalStream = null;
     voiceRemoteAudio = null;
+    pendingVoiceWorkflowSync = null;
     try { if (socket && socket.readyState < 2) socket.close(1000, 'Visitor ended Voice'); } catch (e) {}
     try { if (channel) channel.close(); } catch (e) {}
     if (stream) stream.getTracks().forEach(function(track){ track.stop(); });
@@ -3070,6 +3108,25 @@
       // audible rendition. Hold it until playback ends so the interface
       // never looks as though Voice is reading a pre-written chat reply.
       bufferAssistantVoiceTranscript(data.text, data);
+      return;
+    }
+    if (data.type === 'governed.turn.result') {
+      // The governed Worker has already run the same Contact/OTP/lead
+      // processor used by Text. Reflect its structured UI outcome now, but
+      // do not render the draft answer as chat content: the final words are
+      // still appended only after Realtime has actually spoken them.
+      const choices = validQuickReplies(data);
+      renderRow2(choices);
+      if (choices.length) {
+        completeInputInstruction();
+      } else {
+        const instruction = detectInputInstruction(data.reply || '');
+        if (instruction) {
+          activateInputInstruction(data.reply, null);
+          syncActiveWorkflowToVoice(activeInputInstruction, false);
+        }
+      }
+      if (data.action) handleTourAction(data.action, choices);
       return;
     }
     if (data.type === 'voice.terminated') {
@@ -3208,6 +3265,11 @@
 
       const control = new WebSocket(workerWebSocketUrl(data));
       voiceControlSocket = control;
+      control.addEventListener('open', function(){
+        if (control !== voiceControlSocket || !pendingVoiceWorkflowSync) return;
+        control.send(JSON.stringify(pendingVoiceWorkflowSync));
+        pendingVoiceWorkflowSync = null;
+      });
       control.addEventListener('message', handleVoiceControlMessage);
       control.addEventListener('close', function(){
         if (control === voiceControlSocket && !voiceEnding && voiceMode !== 'idle') {
