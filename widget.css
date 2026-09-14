@@ -120,6 +120,8 @@
    ============================================================ */
 .ask-panel{padding:10px 0;background:#fff;position:sticky;top:0;z-index:50;border-bottom:1px solid transparent;transition:border-color .2s}
 .ask-panel.pinned{border-bottom-color:var(--ink-soft)}
+.ask-panel.tour-running{position:fixed;top:0;left:var(--tour-panel-left,0);width:var(--tour-panel-width,100%);z-index:80;border-bottom-color:var(--ink-soft)}
+.ask-panel.tour-running.tour-voice-mode .ask-output-panel{display:none}
 .ask-box{width:100%;margin:0 auto;position:relative;display:flex;flex-direction:column;gap:2px}
 /* Floating X fully removed (31 August 2026, Conversation Panel
    redesign) — replaced by the .ask-footer-hide "Hide Chat ⌃" control
@@ -146,6 +148,8 @@
 .ask-output-panel:has(.ask-thread.active){display:flex;flex-direction:column;position:relative;background:#fff;border:1px solid var(--line);border-radius:0;box-shadow:0 2px 0 rgba(29,42,58,.05)}
 .ask-thread{display:none;position:relative;padding:18px 20px;max-height:320px;overflow-y:auto}
 .ask-thread.active{display:block}
+.ask-tour-media{padding:14px 20px;display:flex;justify-content:center;background:#fff;border:1px solid var(--line)}
+.ask-tour-media video,.ask-tour-media audio{display:block;width:100%;max-width:760px;max-height:62vh}
 
 .ask-uip{background:#fff;border:1px solid var(--line);border-radius:28px;box-shadow:0 2px 0 rgba(29,42,58,.05);display:flex;flex-direction:column}
 /* ============================================================

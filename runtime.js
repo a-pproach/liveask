@@ -1079,6 +1079,7 @@
   // browser receives navigation fields only; approved context never leaves
   // the governed backend.
   let TOUR_DESTINATION_SELECTORS = {};
+  let TOUR_MEDIA_ASSETS = {};
   fetch(WORKER_URL + '/tour-destinations')
     .then(function(response){ return response.ok ? response.json() : null; })
     .then(function(data){
@@ -1097,6 +1098,17 @@
     .catch(function(){
       // Tours fail closed when deployment configuration is unavailable.
     });
+  fetch(WORKER_URL + '/tour-media-assets')
+    .then(function(response){ return response.ok ? response.json() : null; })
+    .then(function(data){
+      if (!data || typeof data !== 'object') return;
+      Object.keys(data).forEach(function(semanticId){
+        var asset = data[semanticId];
+        if (!asset || (asset.type !== 'video' && asset.type !== 'audio') || !asset.src) return;
+        TOUR_MEDIA_ASSETS[semanticId] = asset;
+      });
+    })
+    .catch(function(){});
 
   // Same "treat home specially" normalization as ABOUT_HREF above, reused
   // here to compare a destination's configured `page` against where the
@@ -1182,11 +1194,50 @@
     }, 2600);
   }
 
+  function pinTourPanel(){
+    if (!askPanel.classList.contains('tour-running')) {
+      const rect = askPanel.getBoundingClientRect();
+      askPanel.style.setProperty('--tour-panel-left', Math.max(0, rect.left) + 'px');
+      askPanel.style.setProperty('--tour-panel-width', Math.min(window.innerWidth, rect.width) + 'px');
+      if (askPanel.parentElement) askPanel.parentElement.style.minHeight = rect.height + 'px';
+    }
+    askPanel.classList.add('tour-running');
+  }
+
   // Executes the Worker's GO_TO action. Fails completely silently on an
   // unknown destination name (never breaks the reply that came with it) —
   // same principle as the original same-page-only version.
   function handleTourAction(action, pendingQuickReplies){
-    if (!action || action.type !== 'GO_TO') return;
+    if (!action) return;
+    pinTourPanel();
+    if (action.type === 'PLAY_MEDIA') {
+      const asset = TOUR_MEDIA_ASSETS[action.target];
+      if (!asset) return;
+      Array.prototype.forEach.call(askPanel.querySelectorAll('.ask-tour-media'), function(existing){ existing.remove(); });
+      const card = document.createElement('div');
+      card.className = 'ask-tour-media';
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'ask-quickreply-btn ask-tour-media-play';
+      play.textContent = asset.label || (asset.type === 'video' ? 'Play video' : 'Play audio');
+      play.addEventListener('click', function(){
+        if (card.querySelector('video,audio')) return;
+        const media = document.createElement(asset.type);
+        media.controls = true;
+        media.preload = 'metadata';
+        media.src = asset.src;
+        card.appendChild(media);
+        const started = media.play();
+        if (started && started.catch) started.catch(function(){});
+        play.remove();
+      });
+      card.appendChild(play);
+      uip.parentElement.insertBefore(card, uip);
+      maybeScrollToBottom();
+      return;
+    }
+    Array.prototype.forEach.call(askPanel.querySelectorAll('.ask-tour-media'), function(existing){ existing.remove(); });
+    if (action.type !== 'GO_TO') return;
     const dest = TOUR_DESTINATION_SELECTORS[action.target];
     if (!dest) return;
     if (normalizedDestPage(dest.page) === normalizedCurrentPath()) {
@@ -1283,6 +1334,9 @@
 
   if (conversationHistory.length > 0) {
     replaySession();
+    if (tourToken && conversationHistory.some(function(message){
+      return message && message.role === 'user' && (message.content === 'Take Tour with Voice' || message.content === 'Take Tour with Text' || message.content === 'Start tour');
+    })) pinTourPanel();
   } else if (tourToken) {
     beginTourEntry();
   } else {
@@ -1332,6 +1386,7 @@
     // the panel is already open by the time the highlight lands rather
     // than visibly popping open a beat later.
     revealPanel();
+    pinTourPanel();
     setTimeout(function(){
       scrollAndHighlight(dest.selector);
       if (pending.quickReplies && pending.quickReplies.length > 0) {
@@ -1509,6 +1564,15 @@
         // same #askRow2 (in .ask-row2-right) and must stay usable while a
         // choice submission is in flight, not get swept up by this guard.
         Array.prototype.forEach.call(row2Left.querySelectorAll('.ask-quickreply-btn'), function(b){ b.disabled = true; });
+        if (tourToken && choice === 'Take Tour with Voice') {
+          startTourVoiceCommand(choice);
+          return;
+        }
+        if (tourToken && voiceSessionIsOpen() && (choice === 'Next stop' || choice === 'End tour')) {
+          sendTourVoiceCommand(choice);
+          return;
+        }
+        if (tourToken && choice === 'Take Tour with Text') pinTourPanel();
         submitToPanel(choice, { showVisitorBubble: true });
       });
       row2Left.appendChild(btn);
@@ -2863,10 +2927,40 @@
   let voiceIdentityEl = null;
   let pendingAssistantVoiceTranscripts = [];
   let pendingVoiceWorkflowSync = null;
+  let pendingTourVoiceCommand = null;
   const renderedVoiceFinals = new Set();
 
   function voiceSessionIsOpen(){
     return voiceMode === 'connecting' || voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted';
+  }
+
+  function appendTourVoiceCommand(command){
+    const v = document.createElement('div');
+    v.className = 'ask-msg visitor';
+    v.innerHTML = '<p></p>';
+    v.querySelector('p').textContent = command;
+    thread.appendChild(v);
+    conversationHistory.push(conversationMessage('user', command, {
+      source: 'visitor', event_type: 'tour_control', modality: 'voice'
+    }));
+    saveSession();
+    maybeScrollToBottom();
+  }
+
+  function sendTourVoiceCommand(command){
+    if (!tourToken || !voiceControlSocket || voiceControlSocket.readyState !== WebSocket.OPEN) return;
+    appendTourVoiceCommand(command);
+    setVoiceUi('speaking', 'Thinking…');
+    voiceControlSocket.send(JSON.stringify({ type: 'tour.command', command: command }));
+  }
+
+  function startTourVoiceCommand(command){
+    if (!tourToken || voiceSessionIsOpen()) return;
+    pinTourPanel();
+    askPanel.classList.add('tour-voice-mode');
+    appendTourVoiceCommand(command);
+    pendingTourVoiceCommand = command;
+    startVoice({ tourCommand: command });
   }
 
   function syncActiveWorkflowToVoice(instruction, announce){
@@ -3076,6 +3170,8 @@
     renderVoicePromptControl();
     voiceEnding = false;
     setVoiceUi('idle');
+    askPanel.classList.remove('tour-voice-mode');
+    pendingTourVoiceCommand = null;
     if (options.notice) renderVoiceNotice(options.notice);
   }
 
@@ -3091,7 +3187,7 @@
     try { data = JSON.parse(event.data); } catch (e) { return; }
     if (data.type === 'sideband.attached') {
       if (voiceAttachTimer) { clearTimeout(voiceAttachTimer); voiceAttachTimer = null; }
-      if (!voiceMuted) setVoiceUi('listening', 'Listening…');
+      if (!voiceMuted) setVoiceUi(pendingTourVoiceCommand ? 'speaking' : 'listening', pendingTourVoiceCommand ? 'Starting Tour…' : 'Listening…');
       return;
     }
     if (data.type === 'voice.state.speaking') {
@@ -3122,6 +3218,7 @@
       return;
     }
     if (data.type === 'governed.turn.result') {
+      pendingTourVoiceCommand = null;
       // The governed Worker has already run the same Contact/OTP/lead
       // processor used by Text. Reflect its structured UI outcome now, but
       // do not render the draft answer as chat content: the final words are
@@ -3138,6 +3235,11 @@
         }
       }
       if (data.action) handleTourAction(data.action, choices);
+      return;
+    }
+    if (data.type === 'tour.command.failed') {
+      pendingTourVoiceCommand = null;
+      finishVoice({ force: true, notice: 'The guided tour could not start in Voice. Text is still ready here.' });
       return;
     }
     if (data.type === 'voice.terminated') {
@@ -3162,6 +3264,7 @@
       call_id: data.providerCallId,
       voice_session_id: data.voiceSessionId,
       engagement_id: sessionId
+      ,tour_token: tourToken || ''
     }).toString();
     return url.toString();
   }
@@ -3277,9 +3380,14 @@
       const control = new WebSocket(workerWebSocketUrl(data));
       voiceControlSocket = control;
       control.addEventListener('open', function(){
-        if (control !== voiceControlSocket || !pendingVoiceWorkflowSync) return;
-        control.send(JSON.stringify(pendingVoiceWorkflowSync));
-        pendingVoiceWorkflowSync = null;
+        if (control !== voiceControlSocket) return;
+        if (pendingVoiceWorkflowSync) {
+          control.send(JSON.stringify(pendingVoiceWorkflowSync));
+          pendingVoiceWorkflowSync = null;
+        }
+        if (pendingTourVoiceCommand) {
+          control.send(JSON.stringify({ type: 'tour.command', command: pendingTourVoiceCommand }));
+        }
       });
       control.addEventListener('message', handleVoiceControlMessage);
       control.addEventListener('close', function(){

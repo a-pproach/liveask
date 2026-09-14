@@ -110,7 +110,7 @@
   };
 
   var runtimeScript = document.createElement('script');
-  runtimeScript.src = baseUrl + 'runtime.js?v=20260913-guided-tours-a-1';
+  runtimeScript.src = baseUrl + 'runtime.js?v=20260914-guided-tour-corrections-1';
   runtimeScript.async = false; // preserve load-then-execute ordering relative to the config handoff above
   document.body.appendChild(runtimeScript);
 })();
