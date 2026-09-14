@@ -1282,6 +1282,9 @@
       .then(function(res){ return res.json(); })
       .then(function(data){
         rememberVoiceAuthority(data);
+        if (data.tourAuthoring === true) setTourAuthoringActive(true);
+        else if (data.tourAuthoring === false) setTourAuthoringActive(false);
+        else if (tourAuthoringActive) setTourAuthoringActive(true);
         beginAnswering(thinking);
         completeIdentity(thinking);
         const replyText = data.reply || "Welcome! Something went wrong setting up your tour — try refreshing, or just ask a question below.";
@@ -1693,6 +1696,9 @@
       .then(function(res){ return res.json(); })
       .then(function(data){
         rememberVoiceAuthority(data);
+        if (data.tourAuthoring === true) setTourAuthoringActive(true);
+        else if (data.tourAuthoring === false) setTourAuthoringActive(false);
+        else if (tourAuthoringActive) setTourAuthoringActive(true);
         beginAnswering(thinking);
         completeIdentity(thinking);
         const replyText = data.reply || "Something went wrong on my end — try again in a moment.";
@@ -2392,6 +2398,7 @@
     adminAction('createTourStart').then(function(data){
       closePlusMenu();
       if (!data.ok) return;
+      setTourAuthoringActive(data.tourAuthoring !== false);
       thread.classList.add('active');
       askPanel.querySelector('.ask-box').classList.add('expanded');
       const note = document.createElement('div');
@@ -2929,6 +2936,27 @@
   let pendingVoiceWorkflowSync = null;
   let pendingTourVoiceCommand = null;
   const renderedVoiceFinals = new Set();
+  const TOUR_AUTHORING_STATE_KEY = 'liveask_tour_authoring_v1';
+
+  function loadTourAuthoringState(){
+    try {
+      const expiresAt = Number(sessionStorage.getItem(TOUR_AUTHORING_STATE_KEY) || 0);
+      if (expiresAt > Date.now()) return true;
+      sessionStorage.removeItem(TOUR_AUTHORING_STATE_KEY);
+    } catch (e) {}
+    return false;
+  }
+
+  let tourAuthoringActive = loadTourAuthoringState();
+
+  function setTourAuthoringActive(active){
+    tourAuthoringActive = !!active;
+    try {
+      if (tourAuthoringActive) sessionStorage.setItem(TOUR_AUTHORING_STATE_KEY, String(Date.now() + (15 * 60 * 1000)));
+      else sessionStorage.removeItem(TOUR_AUTHORING_STATE_KEY);
+    } catch (e) {}
+    updatePrimaryControlState();
+  }
 
   function voiceSessionIsOpen(){
     return voiceMode === 'connecting' || voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted';
@@ -3042,7 +3070,7 @@
     if (voiceMode !== 'idle') return;
     const hasText = input.value.trim().length > 0;
     uip.classList.toggle('is-typed', hasText);
-    sendBtn.setAttribute('aria-label', hasText ? 'Send' : 'Start Voice');
+    sendBtn.setAttribute('aria-label', hasText ? 'Send' : (tourAuthoringActive ? 'Voice is paused while creating a Tour' : 'Start Voice'));
   }
 
   function renderVoiceNotice(message){
@@ -3288,6 +3316,10 @@
   async function startVoice(options){
     options = options || {};
     if (voiceMode !== 'idle') return;
+    if (tourAuthoringActive) {
+      renderVoiceNotice('Voice conversation is paused while you create this Tour. Dictate is still available.');
+      return;
+    }
     if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       voicePromptEnabled = false;
       renderVoicePromptControl();
