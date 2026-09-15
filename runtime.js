@@ -1740,6 +1740,8 @@
           const resumed = activeTourMedia.play();
           if (resumed && resumed.catch) resumed.catch(function(){});
           tourPlaybackState = 'MEDIA_PLAYING';
+          const mediaToggle = activeTourMediaCard && activeTourMediaCard.querySelector('.ask-tour-media-toggle');
+          if (mediaToggle) mediaToggle.textContent = 'Pause';
           renderRow2(['Pause Tour', 'End Tour']);
           notifyTourLifecycle('TOUR_RESUMED');
           return;
