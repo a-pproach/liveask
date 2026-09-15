@@ -128,7 +128,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260915-guided-tour-playback-2';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260915-tour-wrap-uip-1';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -293,7 +293,7 @@
   const INPUT_INSTRUCTION_RULES = [
     { kind: 'name-business', label: 'Enter your name and business name', term: /\bname\s+and\s+business\s+name\b/i },
     { kind: 'email', label: 'Enter your email address', term: /\b(?:email|e-mail)(?:\s+address)?\b/i },
-    { kind: 'phone', label: 'Enter your phone number', term: /\b(?:phone|mobile)(?:\s+(?:number|no\.?))?\b/i },
+    { kind: 'phone', label: 'Enter mobile number', term: /\b(?:phone|mobile|number)(?:\s+(?:number|no\.?))?\b/i },
     { kind: 'name', label: 'Enter name here', term: /\b(?:full\s+)?name\b/i },
     // A direct request may say only "enter the code" after the preceding
     // clause has already established that it is a verification code.
@@ -307,6 +307,9 @@
     // explicitly before the general request/field matcher.
     if (/\bwho should i say is enquiring\b/i.test(value)) {
       return { kind: 'name', label: 'Enter name here', isError: false };
+    }
+    if (/\bwhat(?:'s| is) a good number to reach you on\b/i.test(value)) {
+      return { kind: 'phone', label: 'Enter mobile number', isError: false };
     }
     if (/\b(?:verification|validation|security|one[- ]time)\s+code\b[\s\S]{0,180}\b(?:enter|type|provide)\s+(?:it|that|the code)\b/i.test(value)) {
       return {
@@ -409,6 +412,11 @@
   function activateInputInstruction(text, messageEl){
     const instruction = detectInputInstruction(text);
     if (!instruction) return false;
+    return presentInputInstruction(instruction, messageEl);
+  }
+
+  function presentInputInstruction(instruction, messageEl){
+    if (!instruction || !instruction.kind || !instruction.label) return false;
     clearInterval(rotateTimer);
     rotateTimer = null;
     clearTimeout(rotateFadeTimeout);
@@ -447,14 +455,40 @@
     ph.textContent = 'Ask another question';
   }
 
-  // Sticky panel — pinned via CSS (position:sticky). The panel and its
-  // response thread stay fully visible at all times once a conversation's
-  // active — the page content scrolls past the panel, not the other way
-  // around. Only job here is the subtle "pinned" border cue once it's
-  // actually stuck to the top, for a bit of visual feedback.
-  window.addEventListener('scroll', function(){
-    askPanel.classList.toggle('pinned', window.scrollY > 4);
-  }, { passive: true });
+  // Only the compact UIP is persistent. The logo/menu and transcript remain
+  // ordinary page content and may scroll away. A placeholder preserves layout
+  // while the UIP is fixed, on desktop and mobile alike.
+  const uipPinPlaceholder = document.createElement('div');
+  uipPinPlaceholder.className = 'ask-uip-pin-placeholder';
+  uip.parentNode.insertBefore(uipPinPlaceholder, uip);
+  let uipPinThreshold = 0;
+  function updateUipPin(){
+    if (!uip.classList.contains('uip-pinned')) uipPinThreshold = uip.getBoundingClientRect().top + window.scrollY;
+    const shouldPin = window.scrollY >= Math.max(0, uipPinThreshold);
+    if (shouldPin && !uip.classList.contains('uip-pinned')) {
+      const rect = uip.getBoundingClientRect();
+      uip.style.setProperty('--uip-pin-left', Math.max(0, rect.left) + 'px');
+      uip.style.setProperty('--uip-pin-width', Math.min(window.innerWidth, rect.width) + 'px');
+      uipPinPlaceholder.style.height = rect.height + 'px';
+      uipPinPlaceholder.classList.add('active');
+      uip.classList.add('uip-pinned');
+    } else if (!shouldPin && uip.classList.contains('uip-pinned')) {
+      uip.classList.remove('uip-pinned');
+      uip.style.removeProperty('--uip-pin-left');
+      uip.style.removeProperty('--uip-pin-width');
+      uipPinPlaceholder.classList.remove('active');
+      uipPinPlaceholder.style.height = '';
+    }
+    askPanel.classList.toggle('pinned', shouldPin);
+  }
+  window.addEventListener('scroll', updateUipPin, { passive: true });
+  window.addEventListener('resize', function(){
+    if (uip.classList.contains('uip-pinned')) {
+      uip.style.setProperty('--uip-pin-left', Math.max(0, askPanel.getBoundingClientRect().left) + 'px');
+      uip.style.setProperty('--uip-pin-width', Math.min(window.innerWidth, askPanel.getBoundingClientRect().width) + 'px');
+      uipPinPlaceholder.style.height = uip.getBoundingClientRect().height + 'px';
+    } else updateUipPin();
+  });
   let rotateFadeTimeout = null;
   let rotateTimer = null;
   function startRotation(){
@@ -1083,6 +1117,7 @@
   let activeTourMedia = null;
   let activeTourMediaCard = null;
   let tourPlaybackState = tourToken ? 'INVITED' : 'IDLE';
+  let lastTourRevision = 0;
   let tourChrome = null;
   let tourChromeOriginalStyle = null;
   fetch(WORKER_URL + '/tour-destinations')
@@ -1185,7 +1220,7 @@
     // panel's own CURRENT rendered height (varies by viewport width and
     // whether it's expanded) rather than a fixed guess, and scroll to just
     // below it with a little breathing room.
-    const panelHeight = askPanel.getBoundingClientRect().height;
+    const panelHeight = uip.getBoundingClientRect().height;
     const chromeHeight = tourChrome ? tourChrome.getBoundingClientRect().height : 0;
     const targetTop = el.getBoundingClientRect().top + window.scrollY - panelHeight - chromeHeight - 16;
     window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
@@ -1201,41 +1236,13 @@
   }
 
   function pinTourPanel(){
-    if (!askPanel.classList.contains('tour-running')) {
-      const rect = askPanel.getBoundingClientRect();
-      askPanel.style.setProperty('--tour-panel-left', Math.max(0, rect.left) + 'px');
-      askPanel.style.setProperty('--tour-panel-width', Math.min(window.innerWidth, rect.width) + 'px');
-      if (askPanel.parentElement) askPanel.parentElement.style.minHeight = rect.height + 'px';
-    }
     askPanel.classList.add('tour-running');
-    if (!tourChrome) {
-      const headers = Array.prototype.filter.call(host.$$('header'), function(header){
-        return !!(header.compareDocumentPosition(mountEl) & Node.DOCUMENT_POSITION_FOLLOWING);
-      });
-      tourChrome = headers.length ? headers[headers.length - 1] : null;
-      if (tourChrome) {
-        tourChromeOriginalStyle = tourChrome.getAttribute('style');
-        tourChrome.style.setProperty('position', 'sticky');
-        tourChrome.style.setProperty('top', '0');
-        tourChrome.style.setProperty('z-index', '79');
-        tourChrome.style.setProperty('background', '#fff');
-      }
-    }
-    askPanel.style.setProperty('--tour-panel-top', (tourChrome ? tourChrome.getBoundingClientRect().height : 0) + 'px');
+    updateUipPin();
   }
 
   function restoreTourShell(){
     askPanel.classList.remove('tour-running', 'tour-voice-mode');
-    askPanel.style.removeProperty('--tour-panel-left');
-    askPanel.style.removeProperty('--tour-panel-width');
-    askPanel.style.removeProperty('--tour-panel-top');
-    if (askPanel.parentElement) askPanel.parentElement.style.removeProperty('min-height');
-    if (tourChrome) {
-      if (tourChromeOriginalStyle === null) tourChrome.removeAttribute('style');
-      else tourChrome.setAttribute('style', tourChromeOriginalStyle);
-    }
-    tourChrome = null;
-    tourChromeOriginalStyle = null;
+    updateUipPin();
   }
 
   function suspendVoiceForTourMedia(){
@@ -1250,10 +1257,28 @@
     if (voiceSessionIsOpen()) setVoiceUi('muted', 'Tour paused for video');
   }
 
+  function acceptTourRevision(data){
+    const revision = Number(data && data.tourRevision);
+    if (!Number.isFinite(revision) || revision <= 0) return true;
+    if (revision < lastTourRevision) return false;
+    lastTourRevision = revision;
+    return true;
+  }
+
+  function speakTourWrapInVoice(){
+    if (!voiceControlSocket || voiceControlSocket.readyState !== WebSocket.OPEN) return;
+    try { voiceControlSocket.send(JSON.stringify({ type: 'tour.command', command: 'Tour wrap' })); } catch (e) {}
+  }
+
   function applyTourLifecycleResponse(data){
-    if (!data || !data.ok) return;
+    if (!data || !data.ok || !acceptTourRevision(data)) return;
     if (data.tourState) tourPlaybackState = data.tourState;
-    if (typeof data.reply === 'string' && data.reply.trim()) {
+    const routeReplyToVoice = voiceSessionIsOpen() && typeof data.reply === 'string' && data.reply.trim();
+    if (routeReplyToVoice) {
+      if (voiceRemoteAudio) { const resumed = voiceRemoteAudio.play(); if (resumed && resumed.catch) resumed.catch(function(){}); }
+      setVoiceUi('muted', 'Speaking…');
+      speakTourWrapInVoice();
+    } else if (typeof data.reply === 'string' && data.reply.trim()) {
       const replyText = data.reply.trim();
       conversationHistory.push(conversationMessage('assistant', replyText, data.canonicalEvent || {
         source: 'liveask_workflow', event_type: 'tour_control'
@@ -1334,8 +1359,8 @@
     function finish(eventName){
       if (media !== activeTourMedia) return;
       clearTourMedia({ keepState: true });
-      tourPlaybackState = 'AWAITING_CONCLUSION';
-      if (voiceSessionIsOpen()) setVoiceUi('muted', 'Tour ready to conclude');
+      tourPlaybackState = 'AWAITING_CONTACT';
+      if (voiceSessionIsOpen()) setVoiceUi('muted', 'Preparing tour wrap-up…');
       notifyTourLifecycle(eventName, { assetId: actionTarget });
     }
     close.addEventListener('click', function(){ finish('MEDIA_DISMISSED'); });
@@ -1890,6 +1915,7 @@
         else if (tourAuthoringActive) setTourAuthoringActive(true);
         beginAnswering(thinking);
         completeIdentity(thinking);
+        if (!acceptTourRevision(data)) return;
         const replyText = data.suppressReply ? '' : (data.reply || "Something went wrong on my end — try again in a moment.");
         // Must be checked BEFORE this reply is pushed to conversationHistory
         // below — see isFirstAiReply().
@@ -1919,6 +1945,7 @@
         if (replyText) thread.appendChild(a);
         else a.remove();
         if (quickReplyChoices.length) completeInputInstruction();
+        else if (data.inputInstruction) presentInputInstruction(data.inputInstruction, a);
         else if (replyText) activateInputInstruction(replyText, a);
         showFooter();
         maybeScrollToBottom();
@@ -2037,6 +2064,14 @@
     contact: {
       note: 'Contact',
       reply: "Thank you for requesting contact from us.\nMay we start with your name please?"
+    },
+    'my-business': {
+      note: 'My Business',
+      reply: "You've selected 'My Business'. I can have Chris reach out to discuss the Founding Business offers we are launching with. May I start with your name please?"
+    },
+    'liveask-partners': {
+      note: 'LiveAsk Partners',
+      reply: "You've selected 'LiveAsk Partners'. I can have Chris reach out to discuss the Founding Partner offers we are launching with. May I start with your name please?"
     },
     'book-audit': {
       note: 'Example Enquiry A',
@@ -3449,6 +3484,7 @@
       return;
     }
     if (data.type === 'governed.turn.result') {
+      if (!acceptTourRevision(data)) return;
       pendingTourVoiceCommand = null;
       // The governed Worker has already run the same Contact/OTP/lead
       // processor used by Text. Reflect its structured UI outcome now, but
@@ -3459,9 +3495,9 @@
       if (choices.length) {
         completeInputInstruction();
       } else {
-        const instruction = detectInputInstruction(data.reply || '');
+        const instruction = data.inputInstruction || detectInputInstruction(data.reply || '');
         if (instruction) {
-          activateInputInstruction(data.reply, null);
+          presentInputInstruction(instruction, null);
           syncActiveWorkflowToVoice(activeInputInstruction, false);
         }
       }
@@ -3545,10 +3581,8 @@
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (generation !== voiceGeneration) { stream.getTracks().forEach(function(track){ track.stop(); }); return; }
       voiceLocalStream = stream;
-      if (options.tourCommand || voiceMuted) {
-        voiceMuted = true;
-        stream.getAudioTracks().forEach(function(track){ track.enabled = false; });
-      }
+      voiceMuted = true;
+      stream.getAudioTracks().forEach(function(track){ track.enabled = false; });
 
       const peer = new RTCPeerConnection();
       voicePeer = peer;
