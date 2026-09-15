@@ -128,7 +128,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260912-canonical-conversation-1';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260915-guided-tour-playback-2';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -1080,6 +1080,11 @@
   // the governed backend.
   let TOUR_DESTINATION_SELECTORS = {};
   let TOUR_MEDIA_ASSETS = {};
+  let activeTourMedia = null;
+  let activeTourMediaCard = null;
+  let tourPlaybackState = tourToken ? 'INVITED' : 'IDLE';
+  let tourChrome = null;
+  let tourChromeOriginalStyle = null;
   fetch(WORKER_URL + '/tour-destinations')
     .then(function(response){ return response.ok ? response.json() : null; })
     .then(function(data){
@@ -1181,7 +1186,8 @@
     // whether it's expanded) rather than a fixed guess, and scroll to just
     // below it with a little breathing room.
     const panelHeight = askPanel.getBoundingClientRect().height;
-    const targetTop = el.getBoundingClientRect().top + window.scrollY - panelHeight - 16;
+    const chromeHeight = tourChrome ? tourChrome.getBoundingClientRect().height : 0;
+    const targetTop = el.getBoundingClientRect().top + window.scrollY - panelHeight - chromeHeight - 16;
     window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
     const prev = { transition: el.style.transition, outline: el.style.outline, outlineOffset: el.style.outlineOffset };
     el.style.transition = 'outline-color 0.3s ease';
@@ -1202,6 +1208,165 @@
       if (askPanel.parentElement) askPanel.parentElement.style.minHeight = rect.height + 'px';
     }
     askPanel.classList.add('tour-running');
+    if (!tourChrome) {
+      const headers = Array.prototype.filter.call(host.$$('header'), function(header){
+        return !!(header.compareDocumentPosition(mountEl) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      tourChrome = headers.length ? headers[headers.length - 1] : null;
+      if (tourChrome) {
+        tourChromeOriginalStyle = tourChrome.getAttribute('style');
+        tourChrome.style.setProperty('position', 'sticky');
+        tourChrome.style.setProperty('top', '0');
+        tourChrome.style.setProperty('z-index', '79');
+        tourChrome.style.setProperty('background', '#fff');
+      }
+    }
+    askPanel.style.setProperty('--tour-panel-top', (tourChrome ? tourChrome.getBoundingClientRect().height : 0) + 'px');
+  }
+
+  function restoreTourShell(){
+    askPanel.classList.remove('tour-running', 'tour-voice-mode');
+    askPanel.style.removeProperty('--tour-panel-left');
+    askPanel.style.removeProperty('--tour-panel-width');
+    askPanel.style.removeProperty('--tour-panel-top');
+    if (askPanel.parentElement) askPanel.parentElement.style.removeProperty('min-height');
+    if (tourChrome) {
+      if (tourChromeOriginalStyle === null) tourChrome.removeAttribute('style');
+      else tourChrome.setAttribute('style', tourChromeOriginalStyle);
+    }
+    tourChrome = null;
+    tourChromeOriginalStyle = null;
+  }
+
+  function suspendVoiceForTourMedia(){
+    if (voiceLocalStream) voiceLocalStream.getAudioTracks().forEach(function(track){ track.enabled = false; });
+    voiceMuted = true;
+    if (voiceDataChannel && voiceDataChannel.readyState === 'open') {
+      try { voiceDataChannel.send(JSON.stringify({ type: 'response.cancel' })); } catch (e) {}
+    }
+    if (voiceRemoteAudio) {
+      try { voiceRemoteAudio.pause(); } catch (e) {}
+    }
+    if (voiceSessionIsOpen()) setVoiceUi('muted', 'Tour paused for video');
+  }
+
+  function applyTourLifecycleResponse(data){
+    if (!data || !data.ok) return;
+    if (data.tourState) tourPlaybackState = data.tourState;
+    if (typeof data.reply === 'string' && data.reply.trim()) {
+      const replyText = data.reply.trim();
+      conversationHistory.push(conversationMessage('assistant', replyText, data.canonicalEvent || {
+        source: 'liveask_workflow', event_type: 'tour_control'
+      }));
+      saveSession();
+      thread.classList.add('active');
+      askPanel.querySelector('.ask-box').classList.add('expanded');
+      const message = document.createElement('div');
+      message.className = 'ask-msg ai';
+      message.innerHTML = '<p></p>';
+      message.querySelector('p').textContent = replyText;
+      thread.appendChild(message);
+      showFooter();
+      maybeScrollToBottom();
+    }
+    renderRow2(data.quickReplies || []);
+  }
+
+  function notifyTourLifecycle(eventName, extra){
+    if (!tourToken) return Promise.resolve(null);
+    return postWorker({
+      tourLifecycle: Object.assign({ event: eventName, sessionId: sessionId, tourToken: tourToken }, extra || {})
+    }).then(function(data){ applyTourLifecycleResponse(data); return data; }).catch(function(){ return null; });
+  }
+
+  function clearTourMedia(options){
+    options = options || {};
+    const media = activeTourMedia;
+    const card = activeTourMediaCard;
+    activeTourMedia = null;
+    activeTourMediaCard = null;
+    askPanel.classList.remove('tour-media-active');
+    if (media) {
+      try { media.pause(); } catch (e) {}
+      media.removeAttribute('src');
+      try { media.load(); } catch (e) {}
+    }
+    if (card) card.remove();
+    if (!options.keepState && tourToken) tourPlaybackState = 'ACTIVE';
+  }
+
+  function showTourMedia(asset, actionTarget){
+    clearTourMedia({ keepState: true });
+    suspendVoiceForTourMedia();
+    tourPlaybackState = 'MEDIA_PLAYING';
+    const card = document.createElement('aside');
+    card.className = 'ask-tour-media';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-label', asset.label || 'Tour media');
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'ask-tour-media-close';
+    close.setAttribute('aria-label', 'Close video');
+    close.textContent = '\u00d7';
+    const media = document.createElement(asset.type);
+    media.className = 'ask-tour-media-element';
+    media.controls = false;
+    media.preload = 'auto';
+    media.playsInline = true;
+    media.src = asset.src;
+    if (asset.type === 'video') media.setAttribute('disablepictureinpicture', '');
+    media.setAttribute('controlslist', 'nodownload noplaybackrate noremoteplayback');
+    const controls = document.createElement('div');
+    controls.className = 'ask-tour-media-controls';
+    const playPause = document.createElement('button');
+    playPause.type = 'button';
+    playPause.className = 'ask-tour-media-toggle';
+    playPause.textContent = 'Pause';
+    controls.appendChild(playPause);
+    card.appendChild(close);
+    card.appendChild(media);
+    card.appendChild(controls);
+    shadowRoot.appendChild(card);
+    activeTourMedia = media;
+    activeTourMediaCard = card;
+    askPanel.classList.add('tour-media-active');
+
+    function finish(eventName){
+      if (media !== activeTourMedia) return;
+      clearTourMedia({ keepState: true });
+      tourPlaybackState = 'AWAITING_CONCLUSION';
+      if (voiceSessionIsOpen()) setVoiceUi('muted', 'Tour ready to conclude');
+      notifyTourLifecycle(eventName, { assetId: actionTarget });
+    }
+    close.addEventListener('click', function(){ finish('MEDIA_DISMISSED'); });
+    media.addEventListener('ended', function(){ finish('MEDIA_COMPLETED'); });
+    media.addEventListener('play', function(){
+      playPause.textContent = 'Pause';
+      renderRow2(['Pause Tour', 'End Tour']);
+      notifyTourLifecycle('MEDIA_STARTED', { assetId: actionTarget });
+    }, { once: true });
+    playPause.addEventListener('click', function(){
+      if (media.paused) {
+        const resumed = media.play();
+        if (resumed && resumed.catch) resumed.catch(function(){});
+        tourPlaybackState = 'MEDIA_PLAYING';
+        playPause.textContent = 'Pause';
+        renderRow2(['Pause Tour', 'End Tour']);
+      } else {
+        media.pause();
+        tourPlaybackState = 'PAUSED';
+        playPause.textContent = 'Continue';
+        renderRow2(['Continue Tour', 'End Tour']);
+        notifyTourLifecycle('TOUR_PAUSED', { assetId: actionTarget });
+      }
+    });
+    const started = media.play();
+    if (started && started.catch) {
+      started.catch(function(){
+        playPause.textContent = 'Play';
+        renderRow2(['Continue Tour', 'End Tour']);
+      });
+    }
   }
 
   // Executes the Worker's GO_TO action. Fails completely silently on an
@@ -1213,30 +1378,10 @@
     if (action.type === 'PLAY_MEDIA') {
       const asset = TOUR_MEDIA_ASSETS[action.target];
       if (!asset) return;
-      Array.prototype.forEach.call(askPanel.querySelectorAll('.ask-tour-media'), function(existing){ existing.remove(); });
-      const card = document.createElement('div');
-      card.className = 'ask-tour-media';
-      const play = document.createElement('button');
-      play.type = 'button';
-      play.className = 'ask-quickreply-btn ask-tour-media-play';
-      play.textContent = asset.label || (asset.type === 'video' ? 'Play video' : 'Play audio');
-      play.addEventListener('click', function(){
-        if (card.querySelector('video,audio')) return;
-        const media = document.createElement(asset.type);
-        media.controls = true;
-        media.preload = 'metadata';
-        media.src = asset.src;
-        card.appendChild(media);
-        const started = media.play();
-        if (started && started.catch) started.catch(function(){});
-        play.remove();
-      });
-      card.appendChild(play);
-      uip.parentElement.insertBefore(card, uip);
-      maybeScrollToBottom();
+      showTourMedia(asset, action.target);
       return;
     }
-    Array.prototype.forEach.call(askPanel.querySelectorAll('.ask-tour-media'), function(existing){ existing.remove(); });
+    clearTourMedia();
     if (action.type !== 'GO_TO') return;
     const dest = TOUR_DESTINATION_SELECTORS[action.target];
     if (!dest) return;
@@ -1478,6 +1623,16 @@
     if (!askBox.classList.contains('expanded')) return;
     const path = typeof e.composedPath === 'function' ? e.composedPath() : [e.target];
     if (path.indexOf(askPanel) !== -1) return;
+    // The governed Tour media card deliberately sits beside (not inside)
+    // the UIP on desktop. Its controls are nevertheless part of the same
+    // interaction surface: closing or pausing the video must not collapse
+    // the Tour conversation as though the visitor clicked the page.
+    // Test the immutable event path rather than activeTourMediaCard: the
+    // close handler removes the card and clears that variable before this
+    // document-level listener receives the same bubbling click.
+    if (path.some(function(node){
+      return !!(node && node.classList && node.classList.contains('ask-tour-media'));
+    })) return;
     if (e.target.closest('[data-nav-intent]')) return;
     askBox.classList.remove('expanded');
     thread.classList.remove('active');
@@ -1567,12 +1722,44 @@
         // same #askRow2 (in .ask-row2-right) and must stay usable while a
         // choice submission is in flight, not get swept up by this guard.
         Array.prototype.forEach.call(row2Left.querySelectorAll('.ask-quickreply-btn'), function(b){ b.disabled = true; });
+        if (tourToken && choice === 'Pause Tour') {
+          if (activeTourMedia && !activeTourMedia.paused) {
+            activeTourMedia.pause();
+            tourPlaybackState = 'PAUSED';
+            const mediaToggle = activeTourMediaCard && activeTourMediaCard.querySelector('.ask-tour-media-toggle');
+            if (mediaToggle) mediaToggle.textContent = 'Continue';
+          } else {
+            suspendVoiceForTourMedia();
+            tourPlaybackState = 'PAUSED';
+          }
+          renderRow2(['Continue Tour', 'End Tour']);
+          notifyTourLifecycle('TOUR_PAUSED');
+          return;
+        }
+        if (tourToken && choice === 'Continue Tour' && activeTourMedia && activeTourMedia.paused) {
+          const resumed = activeTourMedia.play();
+          if (resumed && resumed.catch) resumed.catch(function(){});
+          tourPlaybackState = 'MEDIA_PLAYING';
+          renderRow2(['Pause Tour', 'End Tour']);
+          notifyTourLifecycle('TOUR_RESUMED');
+          return;
+        }
+        if (tourToken && choice === 'Conclude Tour') {
+          notifyTourLifecycle('TOUR_CONCLUDED');
+          return;
+        }
+        if (tourToken && choice === 'Contact') {
+          const contactTrigger = host.$('[data-nav-intent="contact"]');
+          if (contactTrigger) contactTrigger.click();
+          return;
+        }
         if (tourToken && choice === 'Take Tour with Voice') {
           startTourVoiceCommand(choice);
           return;
         }
-        if (tourToken && voiceSessionIsOpen() && (choice === 'Next stop' || choice === 'End tour')) {
-          sendTourVoiceCommand(choice);
+        if (tourToken && voiceSessionIsOpen() && (choice === 'Next stop' || choice === 'Continue Tour' || choice === 'End tour' || choice === 'End Tour')) {
+          const voiceCommand = choice === 'Continue Tour' ? 'Next stop' : (choice === 'End Tour' ? 'End tour' : choice);
+          sendTourVoiceCommand(voiceCommand, choice);
           return;
         }
         if (tourToken && choice === 'Take Tour with Text') pinTourPanel();
@@ -1701,15 +1888,17 @@
         else if (tourAuthoringActive) setTourAuthoringActive(true);
         beginAnswering(thinking);
         completeIdentity(thinking);
-        const replyText = data.reply || "Something went wrong on my end — try again in a moment.";
+        const replyText = data.suppressReply ? '' : (data.reply || "Something went wrong on my end — try again in a moment.");
         // Must be checked BEFORE this reply is pushed to conversationHistory
         // below — see isFirstAiReply().
         const showPrivacyNotice = isFirstAiReply();
-        conversationHistory.push(conversationMessage('assistant', replyText, data.canonicalEvent || {
-          turn_id: textTurnId,
-          source: 'sonnet'
-        }));
-        saveSession();
+        if (replyText) {
+          conversationHistory.push(conversationMessage('assistant', replyText, data.canonicalEvent || {
+            turn_id: textTurnId,
+            source: 'sonnet'
+          }));
+          saveSession();
+        }
         const a = document.createElement('div');
         a.className = 'ask-msg ai';
         a.innerHTML = '<p></p>';
@@ -1725,9 +1914,10 @@
         replyP.textContent = replyText;
         const quickReplyChoices = validQuickReplies(data);
         renderRow2(quickReplyChoices);
-        thread.appendChild(a);
+        if (replyText) thread.appendChild(a);
+        else a.remove();
         if (quickReplyChoices.length) completeInputInstruction();
-        else activateInputInstruction(replyText, a);
+        else if (replyText) activateInputInstruction(replyText, a);
         showFooter();
         maybeScrollToBottom();
         // Custom AI Tours: only ever present on a tour guest's turn, and
@@ -2326,7 +2516,14 @@
             .then(function(data){
               closePlusMenu();
               if (!data.ok) return;
-              conversationHistory = [{ role: 'assistant', content: data.reply }];
+              clearTourMedia({ keepState: true });
+              if (voiceSessionIsOpen()) finishVoice({ force: true, showEnding: false });
+              restoreTourShell();
+              tourPlaybackState = 'INVITED';
+              pendingTourVoiceCommand = null;
+              conversationHistory = [conversationMessage('assistant', data.reply, {
+                source: 'liveask_workflow', event_type: 'tour_restarted'
+              })];
               saveSession();
               thread.innerHTML = '';
               thread.classList.add('active');
@@ -2975,9 +3172,9 @@
     maybeScrollToBottom();
   }
 
-  function sendTourVoiceCommand(command){
+  function sendTourVoiceCommand(command, displayLabel){
     if (!tourToken || !voiceControlSocket || voiceControlSocket.readyState !== WebSocket.OPEN) return;
-    appendTourVoiceCommand(command);
+    appendTourVoiceCommand(displayLabel || command);
     setVoiceUi('speaking', 'Thinking…');
     voiceControlSocket.send(JSON.stringify({ type: 'tour.command', command: command }));
   }
@@ -2988,6 +3185,7 @@
     askPanel.classList.add('tour-voice-mode');
     appendTourVoiceCommand(command);
     pendingTourVoiceCommand = command;
+    voiceMuted = true;
     startVoice({ tourCommand: command });
   }
 
@@ -3216,6 +3414,7 @@
     if (data.type === 'sideband.attached') {
       if (voiceAttachTimer) { clearTimeout(voiceAttachTimer); voiceAttachTimer = null; }
       if (!voiceMuted) setVoiceUi(pendingTourVoiceCommand ? 'speaking' : 'listening', pendingTourVoiceCommand ? 'Starting Tour…' : 'Listening…');
+      else setVoiceUi('muted', pendingTourVoiceCommand ? 'Starting Tour…' : 'Voice ready — microphone muted');
       return;
     }
     if (data.type === 'voice.state.speaking') {
@@ -3231,6 +3430,8 @@
         }
       } else if (!voiceMuted) {
         setVoiceUi('listening', 'Listening…');
+      } else {
+        setVoiceUi('muted', 'Voice ready — microphone muted');
       }
       return;
     }
@@ -3263,6 +3464,7 @@
         }
       }
       if (data.action) handleTourAction(data.action, choices);
+      if (data.suppressSpeech && voiceSessionIsOpen()) setVoiceUi('muted', 'Tour paused for video');
       return;
     }
     if (data.type === 'tour.command.failed') {
@@ -3277,6 +3479,7 @@
     if (data.type === 'voice.turn.incomplete' || data.type === 'voice.turn.ended') {
       if (voiceIdentityEl) { completeIdentity(voiceIdentityEl); voiceIdentityEl = null; }
       if (!voiceMuted) setVoiceUi('listening', 'Listening…');
+      else setVoiceUi('muted', 'Voice ready — microphone muted');
       return;
     }
     if (data.type === 'sideband.failed' || data.type === 'sideband.error') {
@@ -3340,6 +3543,10 @@
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (generation !== voiceGeneration) { stream.getTracks().forEach(function(track){ track.stop(); }); return; }
       voiceLocalStream = stream;
+      if (options.tourCommand || voiceMuted) {
+        voiceMuted = true;
+        stream.getAudioTracks().forEach(function(track){ track.enabled = false; });
+      }
 
       const peer = new RTCPeerConnection();
       voicePeer = peer;
@@ -3373,6 +3580,7 @@
         if (providerEvent.type === 'output_audio_buffer.stopped') {
           flushAssistantVoiceTranscript();
           if (!voiceMuted) setVoiceUi('listening', 'Listening…');
+          else setVoiceUi('muted', 'Voice ready — microphone muted');
         }
       });
 

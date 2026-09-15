@@ -120,7 +120,8 @@
    ============================================================ */
 .ask-panel{padding:10px 0;background:#fff;position:sticky;top:0;z-index:50;border-bottom:1px solid transparent;transition:border-color .2s}
 .ask-panel.pinned{border-bottom-color:var(--ink-soft)}
-.ask-panel.tour-running{position:fixed;top:0;left:var(--tour-panel-left,0);width:var(--tour-panel-width,100%);z-index:80;border-bottom-color:var(--ink-soft)}
+.ask-panel.tour-running{position:fixed;top:var(--tour-panel-top,0);left:var(--tour-panel-left,0);width:var(--tour-panel-width,100%);z-index:80;border-bottom-color:var(--ink-soft)}
+.ask-panel.tour-running.tour-media-active{left:20px;width:min(var(--tour-panel-width,100%),calc(100vw - 420px))}
 .ask-panel.tour-running.tour-voice-mode .ask-output-panel{display:none}
 .ask-box{width:100%;margin:0 auto;position:relative;display:flex;flex-direction:column;gap:2px}
 /* Floating X fully removed (31 August 2026, Conversation Panel
@@ -148,8 +149,11 @@
 .ask-output-panel:has(.ask-thread.active){display:flex;flex-direction:column;position:relative;background:#fff;border:1px solid var(--line);border-radius:0;box-shadow:0 2px 0 rgba(29,42,58,.05)}
 .ask-thread{display:none;position:relative;padding:18px 20px;max-height:320px;overflow-y:auto}
 .ask-thread.active{display:block}
-.ask-tour-media{padding:14px 20px;display:flex;justify-content:center;background:#fff;border:1px solid var(--line)}
-.ask-tour-media video,.ask-tour-media audio{display:block;width:100%;max-width:760px;max-height:62vh}
+.ask-tour-media{position:fixed;right:20px;bottom:20px;width:min(360px,calc(100vw - 32px));max-height:72vh;display:flex;flex-direction:column;background:#111;border:1px solid rgba(255,255,255,.28);border-radius:18px;box-shadow:0 18px 54px rgba(0,0,0,.42);overflow:hidden;z-index:70}
+.ask-tour-media-element{display:block;width:100%;max-height:calc(72vh - 48px);object-fit:contain;background:#000}
+.ask-tour-media-close{position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font:26px/1 sans-serif;cursor:pointer;z-index:2}
+.ask-tour-media-controls{display:flex;align-items:center;justify-content:center;min-height:44px;background:#111}
+.ask-tour-media-toggle{border:1px solid rgba(255,255,255,.55);border-radius:999px;background:transparent;color:#fff;padding:7px 18px;font:inherit;cursor:pointer}
 
 .ask-uip{background:#fff;border:1px solid var(--line);border-radius:28px;box-shadow:0 2px 0 rgba(29,42,58,.05);display:flex;flex-direction:column}
 /* ============================================================
@@ -593,6 +597,9 @@
 }
 
 @media (max-width: 640px) {
+  .ask-panel.tour-running.tour-media-active{left:var(--tour-panel-left,0);width:var(--tour-panel-width,100%)}
+  .ask-tour-media{right:12px;bottom:12px;width:min(300px,calc(100vw - 24px));max-height:58vh}
+  .ask-tour-media-element{max-height:calc(58vh - 44px)}
   /* The + menu and secondary panels remain content-led rather than a
      full-width bottom sheet. positionPopover() overlays them on the UIP
      and aligns the bottom borders at every viewport size. */
