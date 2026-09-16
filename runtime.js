@@ -290,6 +290,8 @@
   let inputInstructionAttentionTimer = null;
   let voicePromptEnabled = false;
   let voicePromptButton = null;
+  let voiceUnavailableForSession = false;
+  let voiceUnavailableNoticeShown = false;
   const INPUT_INSTRUCTION_RULES = [
     { kind: 'name-business', label: 'Enter your name and business name', term: /\bname\s+and\s+business\s+name\b/i },
     { kind: 'email', label: 'Enter your email address', term: /\b(?:email|e-mail)(?:\s+address)?\b/i },
@@ -379,7 +381,7 @@
   }
 
   function renderVoicePromptControl(){
-    if (!activeInputInstruction) {
+    if (!activeInputInstruction || voiceUnavailableForSession) {
       if (voicePromptButton) voicePromptButton.remove();
       voicePromptButton = null;
       return;
@@ -424,6 +426,8 @@
     completeInputInstruction();
     activeInputInstruction = instruction;
     activeInputInstructionEl = messageEl || null;
+    askPanel.querySelector('.ask-box').classList.add('expanded');
+    thread.classList.add('active');
     if (activeInputInstructionEl) {
       activeInputInstructionEl.classList.add('ask-instruction-active', 'ask-instruction-attention');
       if (instruction.isError) activeInputInstructionEl.classList.add('ask-instruction-error');
@@ -433,6 +437,11 @@
     ph.classList.add('ask-fake-placeholder--instruction');
     if (instruction.isError) ph.classList.add('ask-fake-placeholder--instruction-error');
     renderVoicePromptControl();
+    updatePrimaryControlState();
+    requestAnimationFrame(function(){
+      askPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      input.focus({ preventScroll: true });
+    });
     inputInstructionAttentionTimer = setTimeout(function(){
       if (activeInputInstructionEl) activeInputInstructionEl.classList.remove('ask-instruction-attention');
       inputInstructionAttentionTimer = null;
@@ -3304,6 +3313,7 @@
     clearVoiceUiClasses();
     voiceStatus.textContent = statusText || '';
     const contactTextMode = tourContactInputActive && mode === 'muted';
+    const unavailableInputMode = voiceUnavailableForSession && !!activeInputInstruction && mode === 'idle';
     input.disabled = !contactTextMode && (mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted' || mode === 'ending');
     micBtn.disabled = mode === 'connecting' || mode === 'ending';
 
@@ -3311,6 +3321,14 @@
       uip.classList.add('is-typed');
       micLabel.textContent = 'Unmute';
       micBtn.setAttribute('aria-label', 'Unmute microphone');
+      sendBtn.setAttribute('aria-label', 'Send message');
+      return;
+    }
+
+    if (unavailableInputMode) {
+      uip.classList.add('is-typed');
+      micLabel.textContent = 'Dictate';
+      micBtn.setAttribute('aria-label', 'Dictate message');
       sendBtn.setAttribute('aria-label', 'Send message');
       return;
     }
@@ -3349,7 +3367,7 @@
   function updatePrimaryControlState(){
     if (voiceMode !== 'idle') return;
     const hasText = input.value.trim().length > 0;
-    uip.classList.toggle('is-typed', hasText);
+    uip.classList.toggle('is-typed', hasText || (voiceUnavailableForSession && !!activeInputInstruction));
     sendBtn.setAttribute('aria-label', hasText ? 'Send' : (tourAuthoringActive ? 'Voice is paused while creating a Tour' : 'Start Voice'));
   }
 
@@ -3453,6 +3471,8 @@
   async function finishVoice(options){
     options = options || {};
     if (voiceEnding) return;
+    const failedInitialTourVoice = !!options.voiceUnavailable && pendingTourVoiceCommand === 'Take Tour with Voice';
+    if (options.voiceUnavailable) voiceUnavailableForSession = true;
     voiceEnding = true;
     voiceGeneration += 1;
     if (voiceStartAbort) { voiceStartAbort.abort(); voiceStartAbort = null; }
@@ -3480,7 +3500,11 @@
     setVoiceUi('idle');
     askPanel.classList.remove('tour-voice-mode');
     pendingTourVoiceCommand = null;
-    if (options.notice) renderVoiceNotice(options.notice);
+    if (options.notice && (!options.voiceUnavailable || !voiceUnavailableNoticeShown)) {
+      renderVoiceNotice(options.notice);
+      if (options.voiceUnavailable) voiceUnavailableNoticeShown = true;
+    }
+    if (failedInitialTourVoice) renderRow2(['Take Tour with Text']);
   }
 
   function voiceFailureMessage(reason){
@@ -3552,12 +3576,11 @@
       return;
     }
     if (data.type === 'tour.command.failed') {
-      pendingTourVoiceCommand = null;
-      finishVoice({ force: true, notice: 'The guided tour could not start in Voice. Text is still ready here.' });
+      finishVoice({ force: true, voiceUnavailable: true, notice: 'The guided tour could not start in Voice. Text is still ready here.' });
       return;
     }
     if (data.type === 'voice.terminated') {
-      finishVoice({ force: true, notice: voiceFailureMessage(data.reason) });
+      finishVoice({ force: true, voiceUnavailable: true, notice: voiceFailureMessage(data.reason) });
       return;
     }
     if (data.type === 'voice.turn.incomplete' || data.type === 'voice.turn.ended') {
@@ -3567,7 +3590,7 @@
       return;
     }
     if (data.type === 'sideband.failed' || data.type === 'sideband.error') {
-      finishVoice({ force: true, notice: 'Voice lost its secure control connection. Text is still ready here.' });
+      finishVoice({ force: true, voiceUnavailable: true, notice: 'Voice lost its secure control connection. Text is still ready here.' });
     }
   }
 
@@ -3608,9 +3631,15 @@
       return;
     }
     if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      voiceUnavailableForSession = true;
       voicePromptEnabled = false;
       renderVoicePromptControl();
-      renderVoiceNotice('Voice is not available in this browser. Text is still ready here.');
+      if (!voiceUnavailableNoticeShown) {
+        renderVoiceNotice('Voice is not available in this browser. Text is still ready here.');
+        voiceUnavailableNoticeShown = true;
+      }
+      if (pendingTourVoiceCommand === 'Take Tour with Voice') renderRow2(['Take Tour with Text']);
+      pendingTourVoiceCommand = null;
       return;
     }
     pauseRotation();
@@ -3669,7 +3698,7 @@
       peer.addEventListener('connectionstatechange', function(){
         if (peer !== voicePeer || voiceEnding) return;
         if (peer.connectionState === 'failed' || peer.connectionState === 'closed') {
-          finishVoice({ force: true, notice: 'Voice connection ended. Text is still ready here.' });
+          finishVoice({ force: true, voiceUnavailable: true, notice: 'Voice connection ended. Text is still ready here.' });
         }
       });
 
@@ -3714,22 +3743,22 @@
       control.addEventListener('message', handleVoiceControlMessage);
       control.addEventListener('close', function(){
         if (control === voiceControlSocket && !voiceEnding && voiceMode !== 'idle') {
-          finishVoice({ force: true, notice: 'Voice connection ended. Text is still ready here.' });
+          finishVoice({ force: true, voiceUnavailable: true, notice: 'Voice connection ended. Text is still ready here.' });
         }
       });
       control.addEventListener('error', function(){
         if (control === voiceControlSocket && !voiceEnding) {
-          finishVoice({ force: true, notice: 'Voice could not open its secure control connection. Text is still ready here.' });
+          finishVoice({ force: true, voiceUnavailable: true, notice: 'Voice could not open its secure control connection. Text is still ready here.' });
         }
       });
       voiceAttachTimer = setTimeout(function(){
-        if (voiceMode === 'connecting') finishVoice({ force: true, notice: 'Voice took too long to connect. Text is still ready here.' });
+        if (voiceMode === 'connecting') finishVoice({ force: true, voiceUnavailable: true, notice: 'Voice took too long to connect. Text is still ready here.' });
       }, 10000);
     } catch (err) {
       if (generation !== voiceGeneration || err.name === 'AbortError') return;
       const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
       const message = denied ? 'Microphone access was denied. Text is still ready here.' : voiceFailureMessage(err.message);
-      await finishVoice({ force: true, notice: message });
+      await finishVoice({ force: true, voiceUnavailable: true, notice: message });
     } finally {
       voiceStartAbort = null;
     }
@@ -3833,7 +3862,7 @@
       return;
     }
     if (input.value.trim()) send();
-    else startVoice({ instruction: voicePromptEnabled ? activeInputInstruction : null });
+    else if (!voiceUnavailableForSession) startVoice({ instruction: voicePromptEnabled ? activeInputInstruction : null });
   });
 
   window.addEventListener('pagehide', function(){
