@@ -128,7 +128,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260915-tour-wrap-uip-1';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260916-tour-input-state-1';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -297,7 +297,7 @@
     { kind: 'name', label: 'Enter name here', term: /\b(?:full\s+)?name\b/i },
     // A direct request may say only "enter the code" after the preceding
     // clause has already established that it is a verification code.
-    { kind: 'code', label: 'Enter validation code here', term: /\b(?:verification|validation|security|one[- ]time)\s+code\b|\bOTP\b|\b(?:the\s+)?code\b/i }
+    { kind: 'code', label: 'Enter verification code', term: /\b(?:verification|validation|security|one[- ]time)\s+code\b|\bOTP\b|\b(?:the\s+)?code\b/i }
   ];
 
   function detectInputInstruction(text){
@@ -314,7 +314,7 @@
     if (/\b(?:verification|validation|security|one[- ]time)\s+code\b[\s\S]{0,180}\b(?:enter|type|provide)\s+(?:it|that|the code)\b/i.test(value)) {
       return {
         kind: 'code',
-        label: 'Enter validation code here',
+        label: 'Enter verification code',
         isError: /\b(?:code|entry|value)\s+(?:is|was)\s+(?:invalid|incorrect|wrong|not valid)\b|\b(?:invalid|incorrect|wrong)\s+(?:code|entry|value)\b|\bdidn['’]?t match\b/i.test(value)
       };
     }
@@ -1257,6 +1257,25 @@
     if (voiceSessionIsOpen()) setVoiceUi('muted', 'Tour paused for video');
   }
 
+  function tourMutedStatus(){
+    return tourPlaybackState === 'COMPLETED'
+      ? 'Tour concluded — ask me anything'
+      : 'Voice ready — microphone muted';
+  }
+
+  function applyTourStatePresentation(data){
+    if (!data || !data.tourState) return;
+    tourPlaybackState = data.tourState;
+    if (data.tourState === 'COMPLETED' || data.tourState === 'CONTACT') {
+      clearTourMedia({ keepState: true });
+      restoreTourShell();
+    }
+    if (data.tourState === 'COMPLETED') {
+      renderRow2([]);
+      if (voiceSessionIsOpen()) setVoiceUi('muted', tourMutedStatus());
+    }
+  }
+
   function acceptTourRevision(data){
     const revision = Number(data && data.tourRevision);
     if (!Number.isFinite(revision) || revision <= 0) return true;
@@ -1272,7 +1291,7 @@
 
   function applyTourLifecycleResponse(data){
     if (!data || !data.ok || !acceptTourRevision(data)) return;
-    if (data.tourState) tourPlaybackState = data.tourState;
+    applyTourStatePresentation(data);
     const routeReplyToVoice = voiceSessionIsOpen() && typeof data.reply === 'string' && data.reply.trim();
     if (routeReplyToVoice) {
       if (voiceRemoteAudio) { const resumed = voiceRemoteAudio.play(); if (resumed && resumed.catch) resumed.catch(function(){}); }
@@ -1916,6 +1935,7 @@
         beginAnswering(thinking);
         completeIdentity(thinking);
         if (!acceptTourRevision(data)) return;
+        applyTourStatePresentation(data);
         const replyText = data.suppressReply ? '' : (data.reply || "Something went wrong on my end — try again in a moment.");
         // Must be checked BEFORE this reply is pushed to conversationHistory
         // below — see isFirstAiReply().
@@ -2063,31 +2083,38 @@
     },
     contact: {
       note: 'Contact',
-      reply: "Thank you for requesting contact from us.\nMay we start with your name please?"
+      reply: "Thank you for requesting contact from us.\nMay we start with your name please?",
+      inputInstruction: { kind: 'name', label: 'Enter name here' }
     },
     'my-business': {
       note: 'My Business',
-      reply: "You've selected 'My Business'. I can have Chris reach out to discuss the Founding Business offers we are launching with. May I start with your name please?"
+      reply: "You've selected 'My Business'. I can have Chris reach out to discuss the Founding Business offers we are launching with. May I start with your name please?",
+      inputInstruction: { kind: 'name', label: 'Enter name here' }
     },
     'liveask-partners': {
       note: 'LiveAsk Partners',
-      reply: "You've selected 'LiveAsk Partners'. I can have Chris reach out to discuss the Founding Partner offers we are launching with. May I start with your name please?"
+      reply: "You've selected 'LiveAsk Partners'. I can have Chris reach out to discuss the Founding Partner offers we are launching with. May I start with your name please?",
+      inputInstruction: { kind: 'name', label: 'Enter name here' }
     },
     'book-audit': {
       note: 'Example Enquiry A',
-      reply: "Thank you for your interest — may I have your name and business name please?"
+      reply: "Thank you for your interest — may I have your name and business name please?",
+      inputInstruction: { kind: 'name-business', label: 'Enter your name and business name' }
     },
     'enquire-build': {
       note: 'Example Enquiry B',
-      reply: "Thank you for enquiring — may I have your name and business name please?"
+      reply: "Thank you for enquiring — may I have your name and business name please?",
+      inputInstruction: { kind: 'name-business', label: 'Enter your name and business name' }
     },
     'register-protocol': {
       note: 'Example Enquiry C',
-      reply: "Thank you for enquiring — may I have your name and business name please?"
+      reply: "Thank you for enquiring — may I have your name and business name please?",
+      inputInstruction: { kind: 'name-business', label: 'Enter your name and business name' }
     },
     'enquire-opportunity': {
       note: 'Example Enquiry D',
-      reply: "Thank you for enquiring — may I have your name and business name please?"
+      reply: "Thank you for enquiring — may I have your name and business name please?",
+      inputInstruction: { kind: 'name-business', label: 'Enter your name and business name' }
     }
   };
   // Whether the notice shows for a nav-intent opener (including "About",
@@ -2160,7 +2187,9 @@
       // Contact and every other deterministic data-entry opener must engage
       // the same Row 1 instruction/Voice Prompt treatment immediately, not
       // only after a later model-authored request.
-      const hasInputInstruction = activateInputInstruction(cfg.reply, a);
+      const hasInputInstruction = cfg.inputInstruction
+        ? presentInputInstruction(cfg.inputInstruction, a)
+        : activateInputInstruction(cfg.reply, a);
       if (hasInputInstruction) syncActiveWorkflowToVoice(activeInputInstruction, true);
       if (!hasInputInstruction) setFinalPlaceholder();
       ph.classList.remove('fade');
@@ -3451,7 +3480,7 @@
     if (data.type === 'sideband.attached') {
       if (voiceAttachTimer) { clearTimeout(voiceAttachTimer); voiceAttachTimer = null; }
       if (!voiceMuted) setVoiceUi(pendingTourVoiceCommand ? 'speaking' : 'listening', pendingTourVoiceCommand ? 'Starting Tour…' : 'Listening…');
-      else setVoiceUi('muted', pendingTourVoiceCommand ? 'Starting Tour…' : 'Voice ready — microphone muted');
+      else setVoiceUi('muted', pendingTourVoiceCommand ? 'Starting Tour…' : tourMutedStatus());
       return;
     }
     if (data.type === 'voice.state.speaking') {
@@ -3468,7 +3497,7 @@
       } else if (!voiceMuted) {
         setVoiceUi('listening', 'Listening…');
       } else {
-        setVoiceUi('muted', 'Voice ready — microphone muted');
+        setVoiceUi('muted', tourMutedStatus());
       }
       return;
     }
@@ -3485,6 +3514,7 @@
     }
     if (data.type === 'governed.turn.result') {
       if (!acceptTourRevision(data)) return;
+      applyTourStatePresentation(data);
       pendingTourVoiceCommand = null;
       // The governed Worker has already run the same Contact/OTP/lead
       // processor used by Text. Reflect its structured UI outcome now, but
@@ -3517,7 +3547,7 @@
     if (data.type === 'voice.turn.incomplete' || data.type === 'voice.turn.ended') {
       if (voiceIdentityEl) { completeIdentity(voiceIdentityEl); voiceIdentityEl = null; }
       if (!voiceMuted) setVoiceUi('listening', 'Listening…');
-      else setVoiceUi('muted', 'Voice ready — microphone muted');
+      else setVoiceUi('muted', tourMutedStatus());
       return;
     }
     if (data.type === 'sideband.failed' || data.type === 'sideband.error') {
@@ -3616,7 +3646,7 @@
         if (providerEvent.type === 'output_audio_buffer.stopped') {
           flushAssistantVoiceTranscript();
           if (!voiceMuted) setVoiceUi('listening', 'Listening…');
-          else setVoiceUi('muted', 'Voice ready — microphone muted');
+          else setVoiceUi('muted', tourMutedStatus());
         }
       });
 
