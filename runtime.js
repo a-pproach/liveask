@@ -128,7 +128,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260916-tour-input-state-1';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260916-tour-contact-exit-1';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -1117,6 +1117,7 @@
   let activeTourMedia = null;
   let activeTourMediaCard = null;
   let tourPlaybackState = tourToken ? 'INVITED' : 'IDLE';
+  let tourContactInputActive = false;
   let lastTourRevision = 0;
   let tourChrome = null;
   let tourChromeOriginalStyle = null;
@@ -1266,9 +1267,15 @@
   function applyTourStatePresentation(data){
     if (!data || !data.tourState) return;
     tourPlaybackState = data.tourState;
+    tourContactInputActive = data.tourState === 'CONTACT';
     if (data.tourState === 'COMPLETED' || data.tourState === 'CONTACT') {
       clearTourMedia({ keepState: true });
       restoreTourShell();
+    }
+    if (data.tourState === 'CONTACT' && voiceSessionIsOpen()) {
+      voiceMuted = true;
+      if (voiceLocalStream) voiceLocalStream.getAudioTracks().forEach(function(track){ track.enabled = false; });
+      setVoiceUi('muted');
     }
     if (data.tourState === 'COMPLETED') {
       renderRow2([]);
@@ -3296,8 +3303,17 @@
     voiceMode = mode;
     clearVoiceUiClasses();
     voiceStatus.textContent = statusText || '';
-    input.disabled = mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted' || mode === 'ending';
+    const contactTextMode = tourContactInputActive && mode === 'muted';
+    input.disabled = !contactTextMode && (mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted' || mode === 'ending');
     micBtn.disabled = mode === 'connecting' || mode === 'ending';
+
+    if (contactTextMode) {
+      uip.classList.add('is-typed');
+      micLabel.textContent = 'Unmute';
+      micBtn.setAttribute('aria-label', 'Unmute microphone');
+      sendBtn.setAttribute('aria-label', 'Send message');
+      return;
+    }
 
     if (mode === 'dictating') {
       uip.classList.add('is-dictating', 'is-awaiting-speech');
@@ -3802,6 +3818,11 @@
   });
 
   sendBtn.addEventListener('click', function(){
+    if (tourContactInputActive && voiceMode === 'muted') {
+      if (input.value.trim()) send();
+      else toggleVoiceMute();
+      return;
+    }
     if (voiceMode === 'connecting' || voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted' || voiceMode === 'ending') {
       finishVoice({ showEnding: true });
       return;
