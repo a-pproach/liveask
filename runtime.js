@@ -1819,6 +1819,11 @@
           startTourVoiceCommand(choice);
           return;
         }
+        if (tourToken && voiceSessionIsOpen() && (choice === 'Phone' || choice === 'Email' || choice === 'Not yet')) {
+          endVoiceAfterTourHandoff = true;
+          sendTourVoiceCommand(choice, choice);
+          return;
+        }
         if (tourToken && voiceSessionIsOpen() && (choice === 'Next stop' || choice === 'Continue Tour' || choice === 'End tour' || choice === 'End Tour')) {
           const voiceCommand = choice === 'Continue Tour' ? 'Next stop' : (choice === 'End Tour' ? 'End tour' : choice);
           sendTourVoiceCommand(voiceCommand, choice);
@@ -3214,6 +3219,7 @@
   let pendingAssistantVoiceTranscripts = [];
   let pendingVoiceWorkflowSync = null;
   let pendingTourVoiceCommand = null;
+  let endVoiceAfterTourHandoff = false;
   const renderedVoiceFinals = new Set();
   const TOUR_AUTHORING_STATE_KEY = 'liveask_tour_authoring_v1';
 
@@ -3313,7 +3319,7 @@
     clearVoiceUiClasses();
     voiceStatus.textContent = statusText || '';
     const contactTextMode = tourContactInputActive && mode === 'muted';
-    const unavailableInputMode = voiceUnavailableForSession && !!activeInputInstruction && mode === 'idle';
+    const unavailableInputMode = voiceUnavailableForSession && mode === 'idle';
     input.disabled = !contactTextMode && (mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted' || mode === 'ending');
     micBtn.disabled = mode === 'connecting' || mode === 'ending';
 
@@ -3367,7 +3373,7 @@
   function updatePrimaryControlState(){
     if (voiceMode !== 'idle') return;
     const hasText = input.value.trim().length > 0;
-    uip.classList.toggle('is-typed', hasText || (voiceUnavailableForSession && !!activeInputInstruction));
+    uip.classList.toggle('is-typed', hasText || voiceUnavailableForSession);
     sendBtn.setAttribute('aria-label', hasText ? 'Send' : (tourAuthoringActive ? 'Voice is paused while creating a Tour' : 'Start Voice'));
   }
 
@@ -3472,7 +3478,7 @@
     options = options || {};
     if (voiceEnding) return;
     const failedInitialTourVoice = !!options.voiceUnavailable && pendingTourVoiceCommand === 'Take Tour with Voice';
-    if (options.voiceUnavailable) voiceUnavailableForSession = true;
+    if (options.voiceUnavailable || options.continueInText) voiceUnavailableForSession = true;
     voiceEnding = true;
     voiceGeneration += 1;
     if (voiceStartAbort) { voiceStartAbort.abort(); voiceStartAbort = null; }
@@ -3500,6 +3506,7 @@
     setVoiceUi('idle');
     askPanel.classList.remove('tour-voice-mode');
     pendingTourVoiceCommand = null;
+    endVoiceAfterTourHandoff = false;
     if (options.notice && (!options.voiceUnavailable || !voiceUnavailableNoticeShown)) {
       renderVoiceNotice(options.notice);
       if (options.voiceUnavailable) voiceUnavailableNoticeShown = true;
@@ -3690,6 +3697,10 @@
         if (providerEvent.type === 'output_audio_buffer.started') setVoiceUi('speaking', 'Speaking…');
         if (providerEvent.type === 'output_audio_buffer.stopped') {
           flushAssistantVoiceTranscript();
+          if (endVoiceAfterTourHandoff) {
+            finishVoice({ force: true, showEnding: false, continueInText: true });
+            return;
+          }
           if (!voiceMuted) setVoiceUi('listening', 'Listening…');
           else setVoiceUi('muted', tourMutedStatus());
         }
