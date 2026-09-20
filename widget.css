@@ -562,8 +562,8 @@
 .ask-scroll-latest.visible{display:flex}
 .ask-scroll-latest svg{width:16px;height:16px;color:var(--ink-soft)}
 
-.ask-quickreply-btn{font:inherit;font-size:13.76px;line-height:1.3;color:var(--navy);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
-.ask-quickreply-btn:hover{background:var(--logo-blue);border-color:var(--logo-blue);color:#fff}
+.ask-quickreply-btn,.ask-default-tour-btn{font:inherit;font-size:13.76px;line-height:1.3;color:var(--navy);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.ask-quickreply-btn:hover,.ask-default-tour-btn:hover{background:var(--logo-blue);border-color:var(--logo-blue);color:#fff}
 /* Reused by .ask-identity-emoji above (Conversation Panel redesign,
    31 August 2026) — the old .ask-thinking/.ask-thinking-emoji classes
    this animation was originally built for are superseded and removed;

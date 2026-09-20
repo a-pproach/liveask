@@ -1,0 +1,19 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>Starting LiveAsk Guided Tour…</title>
+<script>
+(function () {
+  var ref = new URLSearchParams(window.location.search).get('ref') || 'card';
+  try {
+    sessionStorage.setItem('liveask_default_tour_entry', '1');
+    sessionStorage.setItem('liveask_default_tour_ref', ref);
+  } catch (e) {}
+  location.replace('/');
+})();
+</script>
+</head>
+<body></body>
+</html>
