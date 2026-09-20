@@ -627,3 +627,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ask-msg.ai.ask-instruction-attention p{animation:none}
 }
+
+.ask-identity-emoji {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+}
