@@ -110,7 +110,7 @@
   };
 
   var runtimeScript = document.createElement('script');
-  runtimeScript.src = baseUrl + 'runtime.js?v=20260916-tour-text-handoff-1';
+  runtimeScript.src = baseUrl + 'runtime.js?v=20260921-terminal-cta-fix-1';
   runtimeScript.async = false; // preserve load-then-execute ordering relative to the config handoff above
   document.body.appendChild(runtimeScript);
 })();
