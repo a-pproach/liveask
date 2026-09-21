@@ -673,29 +673,25 @@
      untouched, matching Chris's own stated rule precisely. Uses :has(),
      already relied on elsewhere in this exact file
      (.ask-output-panel:has(.ask-thread.active)) — not a new dependency. */
-  .ask-row2:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic-label {
+  .ask-row2.ask-row2--tour-compact:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic-label {
     display: none;
   }
-  .ask-row2:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic {
+  .ask-row2.ask-row2--tour-compact:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic {
     min-width: 0;
   }
-  .ask-row2:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic-surface {
+  .ask-row2.ask-row2--tour-compact:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic-surface {
     width: 27px;
     padding: 0;
   }
 
-  /* Quick-reply pills: hug their own content and distribute evenly across
-     the space between the + icon and the mic/send controls, rather than
-     stretching to fill it or clipping their own text. flex:0 1 auto lets
-     each size to content; space-evenly is "available space" as Chris
-     defined it — bounded by the + icon on the left and the mic/send
-     controls on the right, breathing room distributed within that, not
-     crammed to one edge. */
-  .ask-row2-left {
+  /* Compact one-line distribution belongs only to the explicit guest Tour
+     controls marked by runtime.js. Tour-authoring and other conversational
+     choice sets retain their established wrapping layout. */
+  .ask-row2.ask-row2--tour-compact .ask-row2-left {
     flex-wrap: nowrap;
     justify-content: space-evenly;
   }
-  .ask-row2-left .ask-quickreply-btn {
+  .ask-row2.ask-row2--tour-compact .ask-row2-left .ask-quickreply-btn {
     flex: 0 0 auto;
     min-width: 0;
     white-space: nowrap;

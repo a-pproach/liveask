@@ -128,7 +128,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260916-tour-contact-exit-1';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260921-tour-continuity-uip-2';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -426,8 +426,7 @@
     completeInputInstruction();
     activeInputInstruction = instruction;
     activeInputInstructionEl = messageEl || null;
-    askPanel.querySelector('.ask-box').classList.add('expanded');
-    thread.classList.add('active');
+    revealConversationForInput();
     if (activeInputInstructionEl) {
       activeInputInstructionEl.classList.add('ask-instruction-active', 'ask-instruction-attention');
       if (instruction.isError) activeInputInstructionEl.classList.add('ask-instruction-error');
@@ -576,6 +575,27 @@
     if (conversationHistory.length === 0) return;
     askPanel.querySelector('.ask-box').classList.add('expanded');
     thread.classList.add('active');
+  }
+
+  // Product rule, 21 September 2026: whenever LiveAsk is genuinely asking
+  // the visitor for conversational input (rather than merely offering
+  // mechanical Tour navigation controls), the Conversation Panel must be
+  // visibly open on-screen. Never make a visitor discover it by scrolling
+  // the page manually.
+  function revealConversationForInput(){
+    askPanel.querySelector('.ask-box').classList.add('expanded');
+    thread.classList.add('active');
+    showFooter();
+    requestAnimationFrame(function(){
+      const outputPanel = askPanel.querySelector('.ask-output-panel');
+      if (!outputPanel) return;
+      const rect = outputPanel.getBoundingClientRect();
+      const viewportTop = 0;
+      const viewportBottom = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.top < viewportTop || rect.bottom > viewportBottom || rect.height === 0) {
+        askPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
   }
 
   let autoFocusPending = true;
@@ -1322,31 +1342,26 @@
   function applyTourStatePresentation(data){
     if (!data || !data.tourState) return;
     tourPlaybackState = data.tourState;
-    tourContactInputActive = data.tourState === 'CONTACT';
-    if (data.tourState === 'COMPLETED' || data.tourState === 'CONTACT') {
+    tourContactInputActive = data.tourState === 'CONTACT' || data.tourState === 'AWAITING_CONTACT';
+
+    // The scheduled Tour presentation ends before the contact/conversation
+    // handoff. From AWAITING_CONTACT onward, restore ordinary LiveAsk shell
+    // behaviour while preserving the live Voice session and server-side
+    // Tour token needed to finish the governed contact workflow.
+    if (data.tourState === 'COMPLETED' || data.tourState === 'CONTACT' || data.tourState === 'AWAITING_CONTACT') {
       clearTourMedia({ keepState: true });
       restoreTourShell();
     }
-    if (data.tourState === 'CONTACT' && voiceSessionIsOpen()) {
-      voiceMuted = true;
-      if (voiceLocalStream) voiceLocalStream.getAudioTracks().forEach(function(track){ track.enabled = false; });
-      setVoiceUi('muted');
+    if (data.tourState === 'CONTACT' || data.tourState === 'AWAITING_CONTACT') {
+      revealConversationForInput();
     }
     if (data.tourState === 'COMPLETED') {
       renderRow2([]);
-      if (voiceSessionIsOpen()) setVoiceUi('muted', tourMutedStatus());
+      revealConversationForInput();
       // Return-to-top (Charlie/PM Part D, 21 September 2026) — gated
-      // strictly on tourState === 'COMPLETED', never on CONTACT (still
-      // mid-handoff, not done) or any other state. Guarded per tourToken
-      // rather than a plain boolean so a genuinely new/different tour in
-      // the same page session still gets its own single scroll, while the
-      // same tour's COMPLETED state being delivered more than once (e.g.
-      // a retried/duplicate response) never scrolls twice. Deliberately
-      // does not touch Voice session state itself — that teardown is
-      // already handled by the existing voice.turn.ended/
-      // endVoiceAfterTourHandoff mechanism; this only reads
-      // voiceSessionIsOpen() as an already-existing signal, changes nothing
-      // about it.
+      // strictly on tourState === 'COMPLETED'. Voice is deliberately left
+      // alone: Tour completion changes presentation/state, not the visitor's
+      // chosen communication mode.
       if (tourCompletionScrolledForToken !== tourToken) {
         tourCompletionScrolledForToken = tourToken;
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1894,6 +1909,20 @@
 
   function renderRow2(choices){
     Array.prototype.forEach.call(row2Left.querySelectorAll('.ask-quickreply-btn'), function(b){ b.remove(); });
+
+    // Compact mobile styling is reserved for genuine guest-facing Tour
+    // controls. Authoring/configuration choice sets must retain their normal
+    // wrapping layout instead of being forced into one horizontal strip.
+    const TOUR_COMPACT_CHOICES = new Set([
+      'Take Tour with Voice', 'Take Tour with Text',
+      'Pause Tour', 'Continue Tour', 'Next stop',
+      'End tour', 'End Tour', 'Conclude Tour',
+      'Phone', 'Email', 'Not yet'
+    ]);
+    const normalizedChoices = Array.isArray(choices) ? choices : [];
+    const compactTourControls = !!tourToken && normalizedChoices.length > 0 &&
+      normalizedChoices.every(function(choice){ return TOUR_COMPACT_CHOICES.has(choice); });
+    row2.classList.toggle('ask-row2--tour-compact', compactTourControls);
     // Mobile UIP correction (21 September 2026, Chris-approved via direct
     // side-preview iteration) — these two specific choices get a shorter
     // mobile label. `choice` itself (sent to submitToPanel, matched by
@@ -1958,13 +1987,13 @@
           return;
         }
         if (tourToken && voiceSessionIsOpen() && (choice === 'Phone' || choice === 'Email' || choice === 'Not yet')) {
-          // Terminal Tour handoff must leave the Realtime Voice transport
-          // before entering the ordinary governed contact/OTP path. Sending
-          // these choices as tour.command leaves the browser waiting on a
-          // Voice lifecycle event and bypasses the Part C contact state
-          // machine in the normal Worker request path.
-          await finishVoice({ force: true, showEnding: false, continueInText: true });
-          submitToPanel(choice, { showVisitorBubble: true });
+          // Voice continuity is a product invariant: choosing a contact
+          // option must NOT terminate Voice. Route the choice through the
+          // existing governed Voice/Tour control path, which returns the
+          // same structured contact/OTP state used by Text, while leaving
+          // the visitor's active Voice session untouched.
+          revealConversationForInput();
+          sendTourVoiceCommand(choice, choice);
           return;
         }
         if (tourToken && voiceSessionIsOpen() && (choice === 'Next stop' || choice === 'Continue Tour' || choice === 'End tour' || choice === 'End Tour')) {
@@ -3362,7 +3391,6 @@
   let pendingAssistantVoiceTranscripts = [];
   let pendingVoiceWorkflowSync = null;
   let pendingTourVoiceCommand = null;
-  let endVoiceAfterTourHandoff = false;
   const renderedVoiceFinals = new Set();
   const TOUR_AUTHORING_STATE_KEY = 'liveask_tour_authoring_v1';
 
@@ -3580,6 +3608,9 @@
     saveSession();
     showFooter();
     maybeScrollToBottom();
+    if (role === 'assistant' && (tourPlaybackState === 'AWAITING_CONTACT' || tourPlaybackState === 'CONTACT' || tourPlaybackState === 'COMPLETED')) {
+      revealConversationForInput();
+    }
   }
 
   function bufferAssistantVoiceTranscript(text, metadata){
@@ -3649,7 +3680,6 @@
     setVoiceUi('idle');
     askPanel.classList.remove('tour-voice-mode');
     pendingTourVoiceCommand = null;
-    endVoiceAfterTourHandoff = false;
     if (options.notice && (!options.voiceUnavailable || !voiceUnavailableNoticeShown)) {
       renderVoiceNotice(options.notice);
       if (options.voiceUnavailable) voiceUnavailableNoticeShown = true;
@@ -3714,11 +3744,19 @@
       renderRow2(choices);
       if (choices.length) {
         completeInputInstruction();
+        const mechanicalTourChoices = choices.every(function(choice){
+          return choice === 'Pause Tour' || choice === 'Continue Tour' ||
+            choice === 'Next stop' || choice === 'End tour' ||
+            choice === 'End Tour' || choice === 'Conclude Tour';
+        });
+        if (!mechanicalTourChoices) revealConversationForInput();
       } else {
         const instruction = data.inputInstruction || detectInputInstruction(data.reply || '');
         if (instruction) {
           presentInputInstruction(instruction, null);
           syncActiveWorkflowToVoice(activeInputInstruction, false);
+        } else if (tourPlaybackState === 'AWAITING_CONTACT' || tourPlaybackState === 'CONTACT' || tourPlaybackState === 'COMPLETED') {
+          revealConversationForInput();
         }
       }
       if (data.action) handleTourAction(data.action, choices);
@@ -3735,15 +3773,6 @@
     }
     if (data.type === 'voice.turn.incomplete' || data.type === 'voice.turn.ended') {
       if (voiceIdentityEl) { completeIdentity(voiceIdentityEl); voiceIdentityEl = null; }
-      // A terminal Guided Tour handoff (Phone / Email / Not yet) is already
-      // governed and complete by the time Voice control emits voice.turn.ended.
-      // Do not depend solely on the provider/browser output-audio stopped event:
-      // it is retained below as a compatible fallback, while this authoritative
-      // lifecycle event can now complete the same one-shot teardown.
-      if (data.type === 'voice.turn.ended' && endVoiceAfterTourHandoff) {
-        finishVoice({ force: true, showEnding: false, continueInText: true });
-        return;
-      }
       if (!voiceMuted) setVoiceUi('listening', 'Listening…');
       else setVoiceUi('muted', tourMutedStatus());
       return;
@@ -3849,10 +3878,6 @@
         if (providerEvent.type === 'output_audio_buffer.started') setVoiceUi('speaking', 'Speaking…');
         if (providerEvent.type === 'output_audio_buffer.stopped') {
           flushAssistantVoiceTranscript();
-          if (endVoiceAfterTourHandoff) {
-            finishVoice({ force: true, showEnding: false, continueInText: true });
-            return;
-          }
           if (!voiceMuted) setVoiceUi('listening', 'Listening…');
           else setVoiceUi('muted', tourMutedStatus());
         }
