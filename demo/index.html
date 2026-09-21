@@ -1,1 +1,190 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>See LiveAsk on your website â€” LiveAsk</title>
+<meta name="description" content="Get a private, interactive preview of LiveAsk built from your own website.">
+<style>
+  :root {
+    --liveask-blue: #2b59ff;
+    --ink: #1a1a1a;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --bg: #f7f8fa;
+    --card-done-bg: #eef6ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 20px 40px; padding-top: calc(24px + env(safe-area-inset-top, 0px)); }
+  header.page-head { text-align: center; margin-bottom: 20px; }
+  header.page-head h1 { font-size: 22px; margin: 0 0 6px; }
+  header.page-head p { color: var(--muted); font-size: 14px; margin: 0; }
+
+  .card-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .confirm-card {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; opacity: 0.45; transform: translateY(-4px);
+    transition: opacity 0.35s ease, transform 0.35s ease, background 0.35s ease, border-color 0.35s ease;
+  }
+  .confirm-card.done {
+    opacity: 1; transform: translateY(0);
+    background: var(--card-done-bg); border-color: var(--liveask-blue);
+  }
+  .confirm-card .icon {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border);
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: transparent; transition: all 0.35s ease;
+  }
+  .confirm-card.done .icon { border-color: var(--liveask-blue); background: var(--liveask-blue); color: #fff; }
+  .confirm-card .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+  .confirm-card.done .label { color: var(--liveask-blue); }
+  .confirm-card .value { font-size: 15px; margin-top: 2px; word-break: break-word; }
+  .confirm-card .text { flex: 1 1 auto; min-width: 0; }
+
+  .chat-mount-wrap { background: #fff; border: 1px solid var(--border); border-radius: 12px; min-height: 420px; overflow: hidden; }
+
+  .submitted-banner {
+    display: none; margin-top: 16px; padding: 14px 16px; border-radius: 10px;
+    background: #e6f4ea; color: #1e7e34; font-size: 14px; text-align: center;
+  }
+  .submitted-banner.show { display: block; }
+
+  footer.page-foot { text-align: center; margin-top: 24px; font-size: 12px; color: var(--muted); }
+
+  .vcard-offer {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 18px;
+  }
+  .vcard-offer p { margin: 0; font-size: 13px; color: var(--muted); }
+  .vcard-offer a.vcard-btn {
+    flex: 0 0 auto; display: inline-block; text-decoration: none;
+    background: var(--liveask-blue); color: #fff; font-size: 13px; font-weight: 600;
+    padding: 9px 14px; border-radius: 8px; white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <h1>See LiveAsk on your website</h1>
+    <p>Tell LiveAsk your website below â€” it'll guide you through the rest.</p>
+  </header>
+
+  <!-- Visible on first landing, unconditionally â€” not gated behind any
+       part of the LiveAsk intake flow, and never removed after a Demo
+       request is submitted (the same markup stays in place throughout). -->
+  <div class="vcard-offer">
+    <p>Prefer to talk directly?<br>Save Chris Carroll to your contacts.</p>
+    <a class="vcard-btn" href="chris-carroll.vcf" download="Chris Carroll - LiveAsk.vcf">Save Chris to Contacts</a>
+  </div>
+
+  <div class="card-stack" id="card-stack">
+    <div class="confirm-card" data-card="website">
+      <div class="icon">&#10003;</div>
+      <div class="text"><div class="label">Website</div><div class="value">Not yet confirmed</div></div>
+    </div>
+    <div class="confirm-card" data-card="business">
+      <div class="icon">&#10003;</div>
+      <div class="text"><div class="label">Business</div><div class="value">Not yet confirmed</div></div>
+    </div>
+    <div class="confirm-card" data-card="name">
+      <div class="icon">&#10003;</div>
+      <div class="text"><div class="label">Your name</div><div class="value">Not yet confirmed</div></div>
+    </div>
+    <div class="confirm-card" data-card="contact">
+      <div class="icon">&#10003;</div>
+      <div class="text"><div class="label">Verified contact</div><div class="value">Not yet verified</div></div>
+    </div>
+    <div class="confirm-card" data-card="submitted">
+      <div class="icon">&#10003;</div>
+      <div class="text"><div class="label">Demo request</div><div class="value">Not yet submitted</div></div>
+    </div>
+  </div>
+
+  <div class="chat-mount-wrap" id="liveask-mount-wrap">
+    <!-- The real LiveAsk widget mounts here, in AutoDemo Intake mode. -->
+  </div>
+
+  <div class="submitted-banner" id="submitted-banner">
+    Your request has been received. Chris will review it, and your private preview link will be sent to your verified contact once it's ready.
+  </div>
+
+  <footer class="page-foot">No code. No config. No cost.</footer>
+</div>
+
+<script>
+(function () {
+  // ---------------------------------------------------------------------
+  // Page-level confirmation cards -- listens for `liveask:step` events.
+  //
+  // BUILD-PHASE NOTE: runtime.js does not dispatch this event yet (it is
+  // one of the two prepared-but-not-applied patches, blocked on the
+  // Guided Tour lane releasing runtime.js). Until that patch lands, this
+  // page can only be exercised with EXPLICIT TEST EVENTS, e.g. from the
+  // browser console:
+  //
+  //   window.dispatchEvent(new CustomEvent('liveask:step', {
+  //     detail: { step: 'url_confirmed', value: 'https://example.com' }
+  //   }));
+  //
+  // Valid steps, in order: url_confirmed, business_confirmed,
+  // name_captured, contact_verified, request_submitted. This is the
+  // exact contract the prepared runtime.js patch implements -- this
+  // listener does not change once that patch lands, only the SOURCE of
+  // the event does (real widget instead of a manual console call).
+  // ---------------------------------------------------------------------
+  var STEP_TO_CARD = {
+    url_confirmed: 'website',
+    business_confirmed: 'business',
+    name_captured: 'name',
+    contact_verified: 'contact',
+    request_submitted: 'submitted',
+  };
+
+  function markCardDone(cardKey, value) {
+    var card = document.querySelector('.confirm-card[data-card="' + cardKey + '"]');
+    if (!card) return;
+    card.classList.add('done');
+    var valueEl = card.querySelector('.value');
+    if (valueEl && value) valueEl.textContent = value;
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  window.addEventListener('liveask:step', function (event) {
+    var detail = event.detail || {};
+    var cardKey = STEP_TO_CARD[detail.step];
+    if (!cardKey) return;
+    markCardDone(cardKey, detail.value);
+    if (detail.step === 'request_submitted') {
+      document.getElementById('submitted-banner').classList.add('show');
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Real LiveAsk widget, in AutoDemo Intake configuration.
+  //
+  // data-liveask-site identifies the AutoDemo Intake tenant/deployment
+  // -- the same installation contract every other LiveAsk deployment
+  // already uses, per widget.js's own documented header. data-worker-url
+  // uses the existing "Stage A transitional" bridge widget.js already
+  // supports, pointing this page directly at the new dedicated
+  // deployment rather than a shared/default one.
+  //
+  // ?ref=card is preserved on the page URL itself (kept for analytics/
+  // attribution continuity as instructed) and is not passed into the
+  // widget's own config.
+  // ---------------------------------------------------------------------
+  var script = document.createElement('script');
+  script.src = 'https://liveask.au/widget.js';
+  script.async = true;
+  script.dataset.liveaskSite = 'autodemo-intake';
+  script.dataset.workerUrl = 'https://liveask-autodemo-intake.chriscarroll-promptworkx.workers.dev'; // CW fills in the real deployed URL at promotion
+  document.getElementById('liveask-mount-wrap').appendChild(script);
+})();
+</script>
+</body>
+</html>
 

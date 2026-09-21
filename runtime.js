@@ -2122,6 +2122,20 @@
       .then(function(res){ return res.json(); })
       .then(function(data){
         rememberVoiceAuthority(data);
+        // AutoDemo Intake milestone seam (added for the /demo business-card
+        // intake flow). Absent from every ordinary response — the Worker
+        // only ever sets intakeStep for the dedicated AutoDemo Intake
+        // deployment — so this is a no-op everywhere else, including every
+        // existing Guided Tour and ordinary conversation path. Placed here,
+        // unconditionally, alongside the other unconditional per-response
+        // checks rather than inside any tour-specific branch below.
+        if (data.intakeStep) {
+          try {
+            window.dispatchEvent(new CustomEvent('liveask:step', {
+              detail: { step: data.intakeStep, value: data.intakeValue || null }
+            }));
+          } catch (e) { /* CustomEvent unsupported in some ancient browser — never break the conversation over this */ }
+        }
         if (data.tourAuthoring === true) setTourAuthoringActive(true);
         else if (data.tourAuthoring === false) setTourAuthoringActive(false);
         else if (tourAuthoringActive) setTourAuthoringActive(true);
