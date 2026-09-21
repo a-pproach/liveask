@@ -471,7 +471,39 @@
   uipPinPlaceholder.className = 'ask-uip-pin-placeholder';
   uip.parentNode.insertBefore(uipPinPlaceholder, uip);
   let uipPinThreshold = 0;
+  // ---- TEMPORARY diagnostic overlay (21 September 2026, Charlie/PM Part
+  // B — real-browser Text Tour investigation only) ----
+  // Activated ONLY by adding ?uipdebug=1 to the page URL. Has zero effect
+  // on ordinary visitors and zero effect on production behaviour — this
+  // reads existing state, it never changes anything the real UIP does.
+  // Intended to be removed once the Text Tour cause is confirmed; not a
+  // permanent feature.
+  var UIP_DEBUG = /[?&]uipdebug=1\b/.test(window.location.search);
+  var uipDebugEl = null;
+  var uipDebugPinCallCount = 0;
+  function renderUipDebugOverlay(){
+    if (!UIP_DEBUG) return;
+    if (!uipDebugEl) {
+      uipDebugEl = document.createElement('div');
+      uipDebugEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:999999;background:rgba(0,0,0,.88);color:#0f0;font:11px/1.4 monospace;padding:8px 10px;white-space:pre;pointer-events:none;';
+      document.body.appendChild(uipDebugEl);
+    }
+    var outputPanel = askPanel.querySelector('.ask-output-panel');
+    var rect = uip.getBoundingClientRect();
+    uipDebugEl.textContent =
+      'UIP DEBUG (?uipdebug=1)\n' +
+      'uip-pinned class present: ' + uip.classList.contains('uip-pinned') + '\n' +
+      '#askThread.active present: ' + thread.classList.contains('active') + '\n' +
+      '.ask-output-panel computed display: ' + window.getComputedStyle(outputPanel).display + '\n' +
+      'askPanel classes: ' + askPanel.className + '\n' +
+      'uip.getBoundingClientRect(): top=' + rect.top.toFixed(0) + ' height=' + rect.height.toFixed(0) + '\n' +
+      'window.scrollY: ' + window.scrollY.toFixed(0) + '   uipPinThreshold: ' + (typeof uipPinThreshold === 'number' ? uipPinThreshold.toFixed(0) : uipPinThreshold) + '\n' +
+      'updateUipPin() call count: ' + uipDebugPinCallCount;
+  }
+  if (UIP_DEBUG) setInterval(renderUipDebugOverlay, 300);
+
   function updateUipPin(){
+    uipDebugPinCallCount++;
     if (!uip.classList.contains('uip-pinned')) uipPinThreshold = uip.getBoundingClientRect().top + window.scrollY;
     const shouldPin = window.scrollY >= Math.max(0, uipPinThreshold);
     if (shouldPin && !uip.classList.contains('uip-pinned')) {
@@ -489,6 +521,7 @@
       uipPinPlaceholder.style.height = '';
     }
     askPanel.classList.toggle('pinned', shouldPin);
+    renderUipDebugOverlay();
   }
   window.addEventListener('scroll', updateUipPin, { passive: true });
   window.addEventListener('resize', function(){
@@ -1138,6 +1171,9 @@
   let tourPlaybackState = tourToken ? 'INVITED' : 'IDLE';
   let tourContactInputActive = false;
   let lastTourRevision = 0;
+  // Part D, 21 September 2026 — see applyTourStatePresentation's COMPLETED
+  // branch for the actual guard logic and full reasoning.
+  let tourCompletionScrolledForToken = null;
   let tourChrome = null;
   let tourChromeOriginalStyle = null;
   fetch(WORKER_URL + '/tour-destinations')
@@ -1299,6 +1335,22 @@
     if (data.tourState === 'COMPLETED') {
       renderRow2([]);
       if (voiceSessionIsOpen()) setVoiceUi('muted', tourMutedStatus());
+      // Return-to-top (Charlie/PM Part D, 21 September 2026) — gated
+      // strictly on tourState === 'COMPLETED', never on CONTACT (still
+      // mid-handoff, not done) or any other state. Guarded per tourToken
+      // rather than a plain boolean so a genuinely new/different tour in
+      // the same page session still gets its own single scroll, while the
+      // same tour's COMPLETED state being delivered more than once (e.g.
+      // a retried/duplicate response) never scrolls twice. Deliberately
+      // does not touch Voice session state itself — that teardown is
+      // already handled by the existing voice.turn.ended/
+      // endVoiceAfterTourHandoff mechanism; this only reads
+      // voiceSessionIsOpen() as an already-existing signal, changes nothing
+      // about it.
+      if (tourCompletionScrolledForToken !== tourToken) {
+        tourCompletionScrolledForToken = tourToken;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   }
 
@@ -1842,11 +1894,27 @@
 
   function renderRow2(choices){
     Array.prototype.forEach.call(row2Left.querySelectorAll('.ask-quickreply-btn'), function(b){ b.remove(); });
+    // Mobile UIP correction (21 September 2026, Chris-approved via direct
+    // side-preview iteration) — these two specific choices get a shorter
+    // mobile label. `choice` itself (sent to submitToPanel, matched by
+    // every click-handler branch below, and shown in the visitor's own
+    // echoed chat bubble) is completely unchanged — only this button's own
+    // displayed markup differs. Every other quick-reply anywhere else in
+    // this file is entirely unaffected: this is checked before falling
+    // back to the exact original textContent assignment.
+    const MOBILE_SHORT_LABELS = {
+      'Take Tour with Voice': 'Voice Tour',
+      'Take Tour with Text': 'Text Tour'
+    };
     (choices || []).forEach(function(choice){
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'ask-quickreply-btn';
-      btn.textContent = choice;
+      if (MOBILE_SHORT_LABELS[choice]) {
+        btn.innerHTML = '<span class="ask-quickreply-long">' + choice + '</span><span class="ask-quickreply-short">' + MOBILE_SHORT_LABELS[choice] + '</span>';
+      } else {
+        btn.textContent = choice;
+      }
       btn.addEventListener('click', function(){
         // Scoped to quickreply buttons only — mic/send now live in this
         // same #askRow2 (in .ask-row2-right) and must stay usable while a
@@ -1906,7 +1974,6 @@
     });
     syncDefaultTourButton();
   }
-
   // Defensive client-side re-validation of data.quickReplies — the Worker
   // already validates strictly (system-prompt.js Section 8 / index-worker.js),
   // but never trust a network response blindly for something rendered as

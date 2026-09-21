@@ -121,7 +121,18 @@
 .ask-panel{padding:10px 0;background:#fff;position:relative;z-index:50;border-bottom:1px solid transparent;transition:border-color .2s}
 .ask-panel.pinned{border-bottom-color:var(--ink-soft)}
 .ask-panel.tour-running{border-bottom-color:var(--ink-soft)}
-.ask-panel.tour-running.tour-voice-mode .ask-output-panel{display:none}
+/* Guided Tour UIP correction, 21 September 2026 (Charlie/PM approved,
+   Part A) — this rule used to unconditionally hide .ask-output-panel
+   during an active Voice Tour, which was the confirmed P0 cause of the
+   conversation/output panel disappearing during Voice Tour and at the
+   terminal Phone/Email/Not yet handoff. Removed rather than narrowed:
+   confirmed by direct search this was the ONLY rule referencing
+   .tour-voice-mode anywhere in either file, so nothing else assumes the
+   panel's absence during Voice Tour. Visibility now falls back entirely
+   to the pre-existing, general .ask-output-panel:has(.ask-thread.active)
+   rule below — the same mechanism that already correctly governs every
+   non-Tour and Text-Tour case.
+*/
 .ask-box{width:100%;margin:0 auto;position:relative;display:flex;flex-direction:column;gap:2px}
 /* Floating X fully removed (31 August 2026, Conversation Panel
    redesign) — replaced by the .ask-footer-hide "Hide Chat ⌃" control
@@ -630,4 +641,75 @@
 
 .ask-identity-emoji {
   font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+}
+
+/* ============================================================
+   MOBILE UIP CORRECTION — 21 September 2026
+   Accepted by Chris via direct side-preview iteration (Charlie/PM
+   authorised this workflow explicitly: visible UI changes go through
+   Chris directly, not back through PM for each visual tweak).
+   Scoped entirely to narrow mobile widths — desktop is untouched, per
+   the original brief ("Desktop/tablet may retain longer labels").
+   ============================================================ */
+/* Default (desktop/tablet): full label always shown, short label never
+   shown — the mobile media query below overrides both. */
+.ask-quickreply-short { display: none; }
+.ask-quickreply-long { display: inline; }
+
+@media (max-width: 480px) {
+
+  /* Short labels for the two Tour-type choices only. .ask-quickreply-long/
+     -short are rendered by renderRow2() only for these two specific
+     choices (see runtime.js) — every other quick-reply anywhere in the
+     app renders as plain textContent and is completely unaffected here. */
+  .ask-quickreply-long { display: none; }
+  .ask-quickreply-short { display: inline; }
+
+  /* Dictate (and, by the same rule, an active Voice session's Mute/Unmute
+     pill, which reuses this same .ask-mic element) collapses to icon-only
+     the moment .ask-row2-left holds more than one button — i.e. whenever
+     context choices genuinely need the room. A single choice (e.g. the
+     plain "Start Guided Tour" landing state) is exactly the one case left
+     untouched, matching Chris's own stated rule precisely. Uses :has(),
+     already relied on elsewhere in this exact file
+     (.ask-output-panel:has(.ask-thread.active)) — not a new dependency. */
+  .ask-row2:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic-label {
+    display: none;
+  }
+  .ask-row2:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic {
+    min-width: 0;
+  }
+  .ask-row2:has(.ask-row2-left .ask-quickreply-btn:nth-child(2)) .ask-mic-surface {
+    width: 27px;
+    padding: 0;
+  }
+
+  /* Quick-reply pills: hug their own content and distribute evenly across
+     the space between the + icon and the mic/send controls, rather than
+     stretching to fill it or clipping their own text. flex:0 1 auto lets
+     each size to content; space-evenly is "available space" as Chris
+     defined it — bounded by the + icon on the left and the mic/send
+     controls on the right, breathing room distributed within that, not
+     crammed to one edge. */
+  .ask-row2-left {
+    flex-wrap: nowrap;
+    justify-content: space-evenly;
+  }
+  .ask-row2-left .ask-quickreply-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+    white-space: nowrap;
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  /* + icon: a "+" glyph is read by its visual centre, not its bounding-box
+     edge (confirmed directly with a measurement overlay in real Chromium
+     during this correction) — aligning only the edge left it looking like
+     it sat under "i", not "L". This value holds at any mobile width since
+     neither the wordmark nor this button's positioning is width-dependent
+     — both anchor to the same fixed 16px row inset regardless of viewport. */
+  .ask-row2-plus svg {
+    margin-left: -21.5px;
+  }
 }
