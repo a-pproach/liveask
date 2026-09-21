@@ -1915,7 +1915,7 @@
       } else {
         btn.textContent = choice;
       }
-      btn.addEventListener('click', function(){
+      btn.addEventListener('click', async function(){
         // Scoped to quickreply buttons only — mic/send now live in this
         // same #askRow2 (in .ask-row2-right) and must stay usable while a
         // choice submission is in flight, not get swept up by this guard.
@@ -1958,8 +1958,13 @@
           return;
         }
         if (tourToken && voiceSessionIsOpen() && (choice === 'Phone' || choice === 'Email' || choice === 'Not yet')) {
-          endVoiceAfterTourHandoff = true;
-          sendTourVoiceCommand(choice, choice);
+          // Terminal Tour handoff must leave the Realtime Voice transport
+          // before entering the ordinary governed contact/OTP path. Sending
+          // these choices as tour.command leaves the browser waiting on a
+          // Voice lifecycle event and bypasses the Part C contact state
+          // machine in the normal Worker request path.
+          await finishVoice({ force: true, showEnding: false, continueInText: true });
+          submitToPanel(choice, { showVisitorBubble: true });
           return;
         }
         if (tourToken && voiceSessionIsOpen() && (choice === 'Next stop' || choice === 'Continue Tour' || choice === 'End tour' || choice === 'End Tour')) {
