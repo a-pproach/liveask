@@ -110,7 +110,7 @@
   };
 
   var runtimeScript = document.createElement('script');
-  runtimeScript.src = baseUrl + 'runtime.js?v=20260922-autodemo-guide-4';
+  runtimeScript.src = baseUrl + 'runtime.js?v=20260922-autodemo-guide-5';
   runtimeScript.async = false; // preserve load-then-execute ordering relative to the config handoff above
   document.body.appendChild(runtimeScript);
 })();
