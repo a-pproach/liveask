@@ -1,190 +1,230 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>See LiveAsk on your website â€” LiveAsk</title>
-<meta name="description" content="Get a private, interactive preview of LiveAsk built from your own website.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiveAsk Website Preview Request</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --liveask-blue: #2b59ff;
-    --ink: #1a1a1a;
-    --muted: #6b7280;
-    --border: #e5e7eb;
-    --bg: #f7f8fa;
-    --card-done-bg: #eef6ff;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 20px 40px; padding-top: calc(24px + env(safe-area-inset-top, 0px)); }
-  header.page-head { text-align: center; margin-bottom: 20px; }
-  header.page-head h1 { font-size: 22px; margin: 0 0 6px; }
-  header.page-head p { color: var(--muted); font-size: 14px; margin: 0; }
+:root{
+  --liveask-blue:#005FAF;
+  --ink:#1A1A1C;
+  --muted:#667085;
+  --line:#E5E7EB;
+  --soft:#F7F9FC;
+  --green:#18794E;
+  --paper:#fff;
+  --page-max:1200px;
+  --gutter-desktop:48px;
+  --gutter-mobile:20px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%}
+body{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  color:var(--ink);
+  background:var(--paper);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+.wrap{
+  max-width:var(--page-max);
+  margin:0 auto;
+  padding-left:var(--gutter-desktop);
+  padding-right:var(--gutter-desktop);
+}
+.site-header{padding-top:32px;padding-bottom:18px}
+.logo-lockup{display:block;margin-bottom:20px;width:fit-content}
+.logo-lockup img{display:block;height:96px;width:auto}
+.primary-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;max-width:480px;margin:0 auto 0 0;
+  flex-wrap:nowrap;white-space:nowrap;
+}
+.primary-nav a{
+  font-size:13px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink);
+}
+.primary-nav a:hover,.primary-nav a:focus-visible{color:var(--liveask-blue)}
+.primary-nav [data-mobile]{display:none}
 
-  .card-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-  .confirm-card {
-    display: flex; align-items: center; gap: 12px;
-    background: #fff; border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 16px; opacity: 0.45; transform: translateY(-4px);
-    transition: opacity 0.35s ease, transform 0.35s ease, background 0.35s ease, border-color 0.35s ease;
-  }
-  .confirm-card.done {
-    opacity: 1; transform: translateY(0);
-    background: var(--card-done-bg); border-color: var(--liveask-blue);
-  }
-  .confirm-card .icon {
-    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border);
-    flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
-    font-size: 13px; color: transparent; transition: all 0.35s ease;
-  }
-  .confirm-card.done .icon { border-color: var(--liveask-blue); background: var(--liveask-blue); color: #fff; }
-  .confirm-card .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
-  .confirm-card.done .label { color: var(--liveask-blue); }
-  .confirm-card .value { font-size: 15px; margin-top: 2px; word-break: break-word; }
-  .confirm-card .text { flex: 1 1 auto; min-width: 0; }
+main{flex:1}
+.demo-shell{padding-top:28px;padding-bottom:36px}
+#liveask-demo-mount{width:100%}
 
-  .chat-mount-wrap { background: #fff; border: 1px solid var(--border); border-radius: 12px; min-height: 420px; overflow: hidden; }
+.contact-card{
+  margin-top:20px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:18px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  background:#fff;
+}
+.contact-copy strong{display:block;font-size:15px;margin-bottom:3px}
+.contact-copy span{display:block;color:var(--muted);font-size:13px;line-height:1.45}
+.contact-link{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:42px;
+  padding:0 16px;
+  border-radius:8px;
+  background:var(--liveask-blue);
+  color:white;
+  font-weight:700;
+  font-size:13px;
+}
+.contact-link:hover,.contact-link:focus-visible{filter:brightness(.95)}
 
-  .submitted-banner {
-    display: none; margin-top: 16px; padding: 14px 16px; border-radius: 10px;
-    background: #e6f4ea; color: #1e7e34; font-size: 14px; text-align: center;
-  }
-  .submitted-banner.show { display: block; }
+.progressive{
+  margin-top:20px;
+  display:grid;
+  gap:10px;
+}
+.progress-item{
+  display:none;
+  align-items:center;
+  gap:12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:13px 15px;
+  background:var(--soft);
+}
+.progress-item.show{display:flex}
+.progress-tick{
+  flex:0 0 26px;
+  width:26px;height:26px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:#E8F5EE;
+  color:var(--green);
+  font-weight:900;
+  font-size:14px;
+}
+.progress-text{min-width:0}
+.progress-label{font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;color:var(--muted)}
+.progress-value{margin-top:2px;font-size:14px;font-weight:650;overflow-wrap:anywhere}
 
-  footer.page-foot { text-align: center; margin-top: 24px; font-size: 12px; color: var(--muted); }
+.page-footer{
+  margin-top:auto;
+  border-top:1px solid var(--line);
+  padding:20px 0 24px;
+  color:#7A8494;
+  font-size:12px;
+}
+.footer-row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
-  .vcard-offer {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    background: #fff; border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 16px; margin-bottom: 18px;
-  }
-  .vcard-offer p { margin: 0; font-size: 13px; color: var(--muted); }
-  .vcard-offer a.vcard-btn {
-    flex: 0 0 auto; display: inline-block; text-decoration: none;
-    background: var(--liveask-blue); color: #fff; font-size: 13px; font-weight: 600;
-    padding: 9px 14px; border-radius: 8px; white-space: nowrap;
-  }
+@media(max-width:720px){
+  .wrap{padding-left:var(--gutter-mobile);padding-right:var(--gutter-mobile)}
+  .site-header{padding-top:16px;padding-bottom:10px}
+  .logo-lockup{margin-bottom:8px}
+  .logo-lockup img{height:58px}
+  .primary-nav{max-width:none;overflow:hidden}
+  .primary-nav a{font-size:10.5px;letter-spacing:.02em}
+  .primary-nav [data-desktop]{display:none}
+  .primary-nav [data-mobile]{display:inline}
+  .demo-shell{padding-top:22px;padding-bottom:28px}
+  .contact-card{align-items:flex-start;flex-direction:column}
+  .contact-link{width:100%}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="page-head">
-    <h1>See LiveAsk on your website</h1>
-    <p>Tell LiveAsk your website below â€” it'll guide you through the rest.</p>
-  </header>
-
-  <!-- Visible on first landing, unconditionally â€” not gated behind any
-       part of the LiveAsk intake flow, and never removed after a Demo
-       request is submitted (the same markup stays in place throughout). -->
-  <div class="vcard-offer">
-    <p>Prefer to talk directly?<br>Save Chris Carroll to your contacts.</p>
-    <a class="vcard-btn" href="chris-carroll.vcf" download="Chris Carroll - LiveAsk.vcf">Save Chris to Contacts</a>
+<header class="site-header">
+  <div class="wrap">
+    <a href="https://liveask.au/" class="logo-lockup" aria-label="LiveAsk home">
+      <img src="https://liveask.au/assets/liveask-logo.gif" alt="LiveAsk">
+    </a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a href="https://liveask.au/">Home</a>
+      <a href="https://liveask.au/#liveask-primary-mount">My Business</a>
+      <a href="https://liveask.au/#liveask-primary-mount"><span data-desktop>LiveAsk Partners</span><span data-mobile>Partners</span></a>
+      <a href="https://liveask.au/#liveask-primary-mount">Contact</a>
+    </nav>
   </div>
+</header>
 
-  <div class="card-stack" id="card-stack">
-    <div class="confirm-card" data-card="website">
-      <div class="icon">&#10003;</div>
-      <div class="text"><div class="label">Website</div><div class="value">Not yet confirmed</div></div>
-    </div>
-    <div class="confirm-card" data-card="business">
-      <div class="icon">&#10003;</div>
-      <div class="text"><div class="label">Business</div><div class="value">Not yet confirmed</div></div>
-    </div>
-    <div class="confirm-card" data-card="name">
-      <div class="icon">&#10003;</div>
-      <div class="text"><div class="label">Your name</div><div class="value">Not yet confirmed</div></div>
-    </div>
-    <div class="confirm-card" data-card="contact">
-      <div class="icon">&#10003;</div>
-      <div class="text"><div class="label">Verified contact</div><div class="value">Not yet verified</div></div>
-    </div>
-    <div class="confirm-card" data-card="submitted">
-      <div class="icon">&#10003;</div>
-      <div class="text"><div class="label">Demo request</div><div class="value">Not yet submitted</div></div>
-    </div>
+<main>
+  <div class="wrap demo-shell">
+    <div id="liveask-demo-mount" aria-label="LiveAsk website preview request"></div>
+
+    <section class="contact-card" aria-label="Chris Carroll contact details">
+      <div class="contact-copy">
+        <strong>Prefer to talk directly? Save Chris Carroll to your contacts.</strong>
+        <span>Chris Carroll · Founder · LiveAsk</span>
+      </div>
+      <a class="contact-link" href="chris-carroll.vcf" download>Save Chris to Contacts</a>
+    </section>
+
+    <section class="progressive" id="intake-progress" aria-live="polite">
+      <div class="progress-item" data-step="url_confirmed">
+        <div class="progress-tick">✓</div>
+        <div class="progress-text"><div class="progress-label">Website confirmed</div><div class="progress-value"></div></div>
+      </div>
+      <div class="progress-item" data-step="business_confirmed">
+        <div class="progress-tick">✓</div>
+        <div class="progress-text"><div class="progress-label">Business confirmed</div><div class="progress-value"></div></div>
+      </div>
+      <div class="progress-item" data-step="name_captured">
+        <div class="progress-tick">✓</div>
+        <div class="progress-text"><div class="progress-label">Requested by</div><div class="progress-value"></div></div>
+      </div>
+      <div class="progress-item" data-step="contact_verified">
+        <div class="progress-tick">✓</div>
+        <div class="progress-text"><div class="progress-label">Contact verified</div><div class="progress-value"></div></div>
+      </div>
+      <div class="progress-item" data-step="request_submitted">
+        <div class="progress-tick">✓</div>
+        <div class="progress-text"><div class="progress-label">Private preview request</div><div class="progress-value">Received</div></div>
+      </div>
+    </section>
   </div>
+</main>
 
-  <div class="chat-mount-wrap" id="liveask-mount-wrap">
-    <!-- The real LiveAsk widget mounts here, in AutoDemo Intake mode. -->
+<footer class="page-footer">
+  <div class="wrap footer-row">
+    <span>© LiveAsk</span>
+    <span>Ask. Answer. Act.</span>
   </div>
-
-  <div class="submitted-banner" id="submitted-banner">
-    Your request has been received. Chris will review it, and your private preview link will be sent to your verified contact once it's ready.
-  </div>
-
-  <footer class="page-foot">No code. No config. No cost.</footer>
-</div>
+</footer>
 
 <script>
-(function () {
-  // ---------------------------------------------------------------------
-  // Page-level confirmation cards -- listens for `liveask:step` events.
-  //
-  // BUILD-PHASE NOTE: runtime.js does not dispatch this event yet (it is
-  // one of the two prepared-but-not-applied patches, blocked on the
-  // Guided Tour lane releasing runtime.js). Until that patch lands, this
-  // page can only be exercised with EXPLICIT TEST EVENTS, e.g. from the
-  // browser console:
-  //
-  //   window.dispatchEvent(new CustomEvent('liveask:step', {
-  //     detail: { step: 'url_confirmed', value: 'https://example.com' }
-  //   }));
-  //
-  // Valid steps, in order: url_confirmed, business_confirmed,
-  // name_captured, contact_verified, request_submitted. This is the
-  // exact contract the prepared runtime.js patch implements -- this
-  // listener does not change once that patch lands, only the SOURCE of
-  // the event does (real widget instead of a manual console call).
-  // ---------------------------------------------------------------------
-  var STEP_TO_CARD = {
-    url_confirmed: 'website',
-    business_confirmed: 'business',
-    name_captured: 'name',
-    contact_verified: 'contact',
-    request_submitted: 'submitted',
+(function(){
+  var labels = {
+    url_confirmed:'Website confirmed',
+    business_confirmed:'Business confirmed',
+    name_captured:'Requested by',
+    contact_verified:'Contact verified',
+    request_submitted:'Private preview request'
   };
 
-  function markCardDone(cardKey, value) {
-    var card = document.querySelector('.confirm-card[data-card="' + cardKey + '"]');
-    if (!card) return;
-    card.classList.add('done');
-    var valueEl = card.querySelector('.value');
-    if (valueEl && value) valueEl.textContent = value;
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  window.addEventListener('liveask:step', function (event) {
+  window.addEventListener('liveask:step', function(event){
     var detail = event.detail || {};
-    var cardKey = STEP_TO_CARD[detail.step];
-    if (!cardKey) return;
-    markCardDone(cardKey, detail.value);
-    if (detail.step === 'request_submitted') {
-      document.getElementById('submitted-banner').classList.add('show');
-    }
+    var item = document.querySelector('.progress-item[data-step="' + detail.step + '"]');
+    if (!item) return;
+    var value = item.querySelector('.progress-value');
+    if (value && detail.value) value.textContent = detail.value;
+    item.classList.add('show');
+    item.scrollIntoView({behavior:'smooth', block:'nearest'});
   });
-
-  // ---------------------------------------------------------------------
-  // Real LiveAsk widget, in AutoDemo Intake configuration.
-  //
-  // data-liveask-site identifies the AutoDemo Intake tenant/deployment
-  // -- the same installation contract every other LiveAsk deployment
-  // already uses, per widget.js's own documented header. data-worker-url
-  // uses the existing "Stage A transitional" bridge widget.js already
-  // supports, pointing this page directly at the new dedicated
-  // deployment rather than a shared/default one.
-  //
-  // ?ref=card is preserved on the page URL itself (kept for analytics/
-  // attribution continuity as instructed) and is not passed into the
-  // widget's own config.
-  // ---------------------------------------------------------------------
-  var script = document.createElement('script');
-  script.src = 'https://liveask.au/widget.js';
-  script.async = true;
-  script.dataset.liveaskSite = 'autodemo-intake';
-  script.dataset.workerUrl = 'https://liveask-autodemo-intake.chriscarroll-promptworkx.workers.dev'; // CW fills in the real deployed URL at promotion
-  document.getElementById('liveask-mount-wrap').appendChild(script);
 })();
+</script>
+
+<script
+  src="https://liveask.au/widget.js"
+  data-liveask-site="autodemo-intake"
+  data-liveask-mount="liveask-demo-mount"
+  data-worker-url="https://liveask-autodemo-intake.chriscarroll-promptworkx.workers.dev"
+  async>
 </script>
 </body>
 </html>
-

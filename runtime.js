@@ -1617,6 +1617,61 @@
       });
   }
 
+
+  // Dedicated AutoDemo Intake first-load greeting. The ordinary LiveAsk
+  // placeholder is intentionally bypassed: this page has one bounded job.
+  function beginAutoDemoIntakeEntry(){
+    askPanel.querySelector('.ask-box').classList.add('expanded');
+    thread.classList.add('active');
+    clearInterval(rotateTimer); rotateTimer = null;
+    clearTimeout(rotateFadeTimeout);
+    setFinalPlaceholder();
+    ph.classList.remove('fade');
+
+    const thinking = beginIdentity();
+    fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sessionId: sessionId, messages: [] })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        rememberVoiceAuthority(data);
+        beginAnswering(thinking);
+        completeIdentity(thinking);
+        const replyText = data.reply || 'Welcome to the LiveAsk website preview request page.';
+        const showPrivacyNotice = isFirstAiReply();
+        conversationHistory.push(conversationMessage('assistant', replyText, data.canonicalEvent || {
+          source: 'liveask_workflow', event_type: 'workflow_prompt'
+        }));
+        saveSession();
+
+        const a = document.createElement('div');
+        a.className = 'ask-msg ai';
+        a.innerHTML = '<p></p>';
+        const replyP = a.querySelector('p');
+        if (showPrivacyNotice) a.insertBefore(buildPrivacyNoticeEl(), replyP);
+        replyP.textContent = replyText;
+        renderRow2(validQuickReplies(data));
+        thread.appendChild(a);
+        showFooter();
+        maybeScrollToBottom();
+      })
+      .catch(function(){
+        thinking.remove();
+        const a = document.createElement('div');
+        a.className = 'ask-msg ai';
+        a.innerHTML = '<p></p>';
+        a.querySelector('p').textContent = "That's taking longer than it should — please refresh and try again.";
+        thread.appendChild(a);
+        renderRow2([]);
+        showFooter();
+        maybeScrollToBottom();
+      });
+  }
+
+  var autoDemoVoiceStartPending = false;
+
   function startDefaultTour(ref){
     defaultTourStarting = true;
     syncDefaultTourButton();
@@ -1664,6 +1719,8 @@
     beginTourEntry();
   } else if (defaultTourStarting) {
     startDefaultTour(tourEntryRef);
+  } else if (cfg.tenantId === 'autodemo-intake') {
+    beginAutoDemoIntakeEntry();
   } else {
     startRotation();
   }
@@ -1890,7 +1947,7 @@
   // failure) actually lands.
   function syncDefaultTourButton(){
     let btn = row2Left.querySelector('.ask-default-tour-btn');
-    if (tourToken || defaultTourStarting) {
+    if (cfg.tenantId === 'autodemo-intake' || tourToken || defaultTourStarting) {
       if (btn) btn.remove();
       return;
     }
@@ -1949,6 +2006,19 @@
         // same #askRow2 (in .ask-row2-right) and must stay usable while a
         // choice submission is in flight, not get swept up by this guard.
         Array.prototype.forEach.call(row2Left.querySelectorAll('.ask-quickreply-btn'), function(b){ b.disabled = true; });
+        if (cfg.tenantId === 'autodemo-intake' && choice === 'Home') {
+          window.location.href = 'https://liveask.au/';
+          return;
+        }
+        if (cfg.tenantId === 'autodemo-intake' && choice === 'Take Tour') {
+          window.location.href = 'https://liveask.au/tour?ref=demo-complete';
+          return;
+        }
+        if (cfg.tenantId === 'autodemo-intake' && choice === 'Use Voice') {
+          autoDemoVoiceStartPending = true;
+          submitToPanel(choice, { showVisitorBubble: true });
+          return;
+        }
         if (tourToken && choice === 'Pause Tour') {
           if (activeTourMedia && !activeTourMedia.paused) {
             activeTourMedia.pause();
@@ -2129,6 +2199,13 @@
         // existing Guided Tour and ordinary conversation path. Placed here,
         // unconditionally, alongside the other unconditional per-response
         // checks rather than inside any tour-specific branch below.
+        if (data.contactVerifiedValue) {
+          try {
+            window.dispatchEvent(new CustomEvent('liveask:step', {
+              detail: { step: 'contact_verified', value: data.contactVerifiedValue }
+            }));
+          } catch (e) {}
+        }
         if (data.intakeStep) {
           try {
             window.dispatchEvent(new CustomEvent('liveask:step', {
@@ -2182,6 +2259,10 @@
         // state machine in index-worker.js's fetch()) — undefined/absent
         // on every ordinary reply, so this is a no-op there.
         if (data.action) handleTourAction(data.action, quickReplyChoices);
+        if (cfg.tenantId === 'autodemo-intake' && autoDemoVoiceStartPending && data.intakeStep === 'mode_selected') {
+          autoDemoVoiceStartPending = false;
+          startVoice({ instruction: null });
+        }
         // Real fix, 7 August 2026: the async reply lands well after the
         // earlier submit-time refocus, and appending it here is a real DOM
         // mutation that can reset the caret blink a second time — same
