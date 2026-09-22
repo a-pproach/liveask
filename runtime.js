@@ -58,6 +58,10 @@
   // initialization cleanly — this file is one big IIFE, so a plain
   // top-level return here is safe and doesn't throw into the host page.
   var WORKER_URL = cfg.workerUrl;
+  // AutoDemo /demo is a deterministic collection workflow. Voice on this
+  // tenant is OUTPUT ONLY: it may speak server-approved collection replies,
+  // but it never opens an audio-input path and every value stays typed.
+  var AUTODEMO_COLLECTION_GUIDE = cfg.tenantId === 'autodemo-intake';
   if (!WORKER_URL) {
     if (shadowRoot) {
       shadowRoot.innerHTML = '<div style="font-family:sans-serif;background:#fff3f3;color:#7a1f1f;border:1px solid #e0b4b4;border-radius:6px;padding:14px 18px;font-size:14px;line-height:1.5;max-width:480px;">LiveAsk configuration error: no Worker URL is set for this deployment (missing data-worker-url). LiveAsk cannot start without this — contact the site administrator.</div>';
@@ -128,7 +132,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260921-tour-continuity-uip-2';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-6';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -293,6 +297,7 @@
   let voiceUnavailableForSession = false;
   let voiceUnavailableNoticeShown = false;
   const INPUT_INSTRUCTION_RULES = [
+    { kind: 'website-url', label: 'Please type your website address', term: /\b(?:website|web\s*site|web)\s+(?:address|url)\b|\bdomain(?:\s+name)?\b/i },
     { kind: 'name-business', label: 'Enter your name and business name', term: /\bname\s+and\s+business\s+name\b/i },
     { kind: 'email', label: 'Enter your email address', term: /\b(?:email|e-mail)(?:\s+address)?\b/i },
     { kind: 'phone', label: 'Enter mobile number', term: /\b(?:phone|mobile|number)(?:\s+(?:number|no\.?))?\b/i },
@@ -1334,6 +1339,7 @@
   }
 
   function tourMutedStatus(){
+    if (AUTODEMO_COLLECTION_GUIDE) return 'Voice guide active — type your answers';
     return tourPlaybackState === 'COMPLETED'
       ? 'Tour concluded — ask me anything'
       : 'Voice ready — microphone muted';
@@ -2015,7 +2021,12 @@
           return;
         }
         if (cfg.tenantId === 'autodemo-intake' && choice === 'Use Voice') {
+          // Start WebRTC directly inside the visitor's click gesture so the
+          // browser preserves permission to play the remote guide audio.
           autoDemoVoiceStartPending = true;
+          voicePromptEnabled = true;
+          renderVoicePromptControl();
+          startVoice({ instruction: null });
           submitToPanel(choice, { showVisitorBubble: true });
           return;
         }
@@ -2251,6 +2262,9 @@
         if (quickReplyChoices.length) completeInputInstruction();
         else if (data.inputInstruction) presentInputInstruction(data.inputInstruction, a);
         else if (replyText) activateInputInstruction(replyText, a);
+        if (AUTODEMO_COLLECTION_GUIDE && voiceSessionIsOpen() && data.voiceGuide) {
+          syncAutoDemoGuideToVoice(data.voiceGuide);
+        }
         showFooter();
         maybeScrollToBottom();
         // Custom AI Tours: only ever present on a tour guest's turn, and
@@ -2261,7 +2275,8 @@
         if (data.action) handleTourAction(data.action, quickReplyChoices);
         if (cfg.tenantId === 'autodemo-intake' && autoDemoVoiceStartPending && data.intakeStep === 'mode_selected') {
           autoDemoVoiceStartPending = false;
-          startVoice({ instruction: null });
+          voicePromptEnabled = true;
+          renderVoicePromptControl();
         }
         // Real fix, 7 August 2026: the async reply lands well after the
         // earlier submit-time refocus, and appending it here is a real DOM
@@ -3485,6 +3500,7 @@
   let voiceIdentityEl = null;
   let pendingAssistantVoiceTranscripts = [];
   let pendingVoiceWorkflowSync = null;
+  let pendingAutoDemoGuideSync = null;
   let pendingTourVoiceCommand = null;
   const renderedVoiceFinals = new Set();
   const TOUR_AUTHORING_STATE_KEY = 'liveask_tour_authoring_v1';
@@ -3574,8 +3590,19 @@
     }
   }
 
+  function syncAutoDemoGuideToVoice(voiceGuide){
+    if (!AUTODEMO_COLLECTION_GUIDE || !voiceGuide || typeof voiceGuide.id !== 'string' || !voiceSessionIsOpen()) return;
+    const payload = { type: 'guide.sync', guideId: voiceGuide.id };
+    if (voiceControlSocket && voiceControlSocket.readyState === WebSocket.OPEN) {
+      voiceControlSocket.send(JSON.stringify(payload));
+      pendingAutoDemoGuideSync = null;
+    } else {
+      pendingAutoDemoGuideSync = payload;
+    }
+  }
+
   function clearVoiceUiClasses(){
-    ['is-typed', 'is-dictating', 'is-awaiting-speech', 'is-connecting', 'is-voice', 'is-speaking', 'is-muted', 'is-ending'].forEach(function(name){
+    ['is-typed', 'is-dictating', 'is-awaiting-speech', 'is-connecting', 'is-voice', 'is-guide', 'is-speaking', 'is-muted', 'is-ending'].forEach(function(name){
       uip.classList.remove(name);
     });
   }
@@ -3585,9 +3612,20 @@
     clearVoiceUiClasses();
     voiceStatus.textContent = statusText || '';
     const contactTextMode = tourContactInputActive && mode === 'muted';
+    const autoDemoGuideTextMode = AUTODEMO_COLLECTION_GUIDE && (mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted');
     const unavailableInputMode = voiceUnavailableForSession && mode === 'idle';
-    input.disabled = !contactTextMode && (mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted' || mode === 'ending');
-    micBtn.disabled = mode === 'connecting' || mode === 'ending';
+    input.disabled = !(contactTextMode || autoDemoGuideTextMode) && (mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted' || mode === 'ending');
+    micBtn.disabled = AUTODEMO_COLLECTION_GUIDE ? true : (mode === 'connecting' || mode === 'ending');
+
+    if (autoDemoGuideTextMode) {
+      uip.classList.add('is-typed', 'is-guide');
+      if (mode === 'speaking') uip.classList.add('is-speaking');
+      if (mode === 'muted') uip.classList.add('is-muted');
+      micLabel.textContent = 'Muted';
+      micBtn.setAttribute('aria-label', 'Microphone locked off on this page');
+      sendBtn.setAttribute('aria-label', 'Send typed answer');
+      return;
+    }
 
     if (contactTextMode) {
       uip.classList.add('is-typed');
@@ -3732,6 +3770,7 @@
     voiceLocalStream = null;
     voiceRemoteAudio = null;
     pendingVoiceWorkflowSync = null;
+    pendingAutoDemoGuideSync = null;
     try { if (socket && socket.readyState < 2) socket.close(1000, 'Visitor ended Voice'); } catch (e) {}
     try { if (channel) channel.close(); } catch (e) {}
     if (stream) stream.getTracks().forEach(function(track){ track.stop(); });
@@ -3817,10 +3856,11 @@
       return;
     }
     if (data.type === 'voice.transcript.visitor_final') {
-      appendVoiceTranscript('user', data.text, data);
+      if (!AUTODEMO_COLLECTION_GUIDE) appendVoiceTranscript('user', data.text, data);
       return;
     }
     if (data.type === 'voice.transcript.assistant_final') {
+      if (AUTODEMO_COLLECTION_GUIDE) return;
       // The governed answer reaches the browser before OpenAI begins its
       // audible rendition. Hold it until playback ends so the interface
       // never looks as though Voice is reading a pre-written chat reply.
@@ -3997,7 +4037,7 @@
           sdpOffer: peer.localDescription.sdp,
           textHistory: conversationHistory,
           canonicalHistory: conversationHistory,
-          structuredInstruction: promptInstruction && voicePromptEnabled ? promptInstruction : null
+          structuredInstruction: promptInstruction && (voicePromptEnabled || AUTODEMO_COLLECTION_GUIDE) ? promptInstruction : null
         }),
         signal: voiceStartAbort.signal
       });
@@ -4018,6 +4058,10 @@
         if (pendingVoiceWorkflowSync) {
           control.send(JSON.stringify(pendingVoiceWorkflowSync));
           pendingVoiceWorkflowSync = null;
+        }
+        if (pendingAutoDemoGuideSync) {
+          control.send(JSON.stringify(pendingAutoDemoGuideSync));
+          pendingAutoDemoGuideSync = null;
         }
         if (pendingTourVoiceCommand) {
           control.send(JSON.stringify({ type: 'tour.command', command: pendingTourVoiceCommand }));
@@ -4048,6 +4092,7 @@
   }
 
   function toggleVoiceMute(){
+    if (AUTODEMO_COLLECTION_GUIDE) return;
     if (!voiceLocalStream || (voiceMode !== 'listening' && voiceMode !== 'speaking' && voiceMode !== 'muted')) return;
     voiceMuted = !voiceMuted;
     voiceLocalStream.getAudioTracks().forEach(function(track){ track.enabled = !voiceMuted; });
@@ -4118,6 +4163,7 @@
   }
 
   micBtn.addEventListener('click', function(){
+    if (AUTODEMO_COLLECTION_GUIDE) return;
     if (voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted') {
       toggleVoiceMute();
       return;
@@ -4130,6 +4176,10 @@
   });
 
   sendBtn.addEventListener('click', function(){
+    if (AUTODEMO_COLLECTION_GUIDE && voiceSessionIsOpen()) {
+      if (input.value.trim()) send();
+      return;
+    }
     if (tourContactInputActive && voiceMode === 'muted') {
       if (input.value.trim()) send();
       else toggleVoiceMute();
@@ -4165,4 +4215,3 @@
 
   updatePrimaryControlState();
 })();
-

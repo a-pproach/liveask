@@ -343,6 +343,17 @@
 .ask-uip.is-voice .ask-liveask-inline,.ask-uip.is-voice .ask-voice-status,.ask-uip.is-voice .ask-stop-square{display:block;opacity:1}
 .ask-uip.is-voice .ask-send{background:#c83b43;box-shadow:0 2px 7px rgba(200,59,67,.25)}
 .ask-uip.is-voice .ask-mic-surface{border-color:#e6aeb5;background:#fdecef}
+
+/* AutoDemo collection Voice is a one-way spoken guide. Unlike ordinary
+   interactive Voice, Row 1 remains a live typed input and the primary
+   control remains Send. The microphone surface is visible only as a
+   locked-muted status. */
+.ask-uip.is-guide .ask-input-row textarea,.ask-uip.is-guide .ask-fake-placeholder{display:block}
+.ask-uip.is-guide .ask-voice-status{display:none}
+.ask-uip.is-guide .ask-voice-wave,.ask-uip.is-guide .ask-stop-square{display:none}
+.ask-uip.is-guide .ask-send-arrow{display:block}
+.ask-uip.is-guide .ask-send{background:#3b82f6;box-shadow:0 2px 7px rgba(59,130,246,.28)}
+.ask-uip.is-guide .ask-mic-surface{border-color:#e6aeb5;background:#fdecef}
 .ask-uip.is-speaking .ask-voice-status{color:var(--logo-blue)}
 .ask-uip.is-muted .ask-mute-slash{display:block}
 .ask-uip.is-dictating .ask-liveask-inline,.ask-uip.is-dictating .ask-fake-placeholder{display:none}
