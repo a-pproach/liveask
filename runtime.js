@@ -132,7 +132,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-3';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-4';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -2272,7 +2272,16 @@
           autoDemoVoiceStartPending = false;
           voicePromptEnabled = true;
           renderVoicePromptControl();
-          startVoice({ instruction: activeInputInstruction });
+
+          // AutoDemo Voice is a speaking guide only. Start the ordinary,
+          // already-proven Voice transport first, then queue the current
+          // workflow instruction onto the trusted control socket. This is
+          // the same post-attach path used by Guided Tours and by every
+          // later workflow instruction; do not rely on a special
+          // start-session prompt to make the first instruction audible.
+          const guideInstruction = activeInputInstruction;
+          startVoice({ instruction: null });
+          if (guideInstruction) syncActiveWorkflowToVoice(guideInstruction, true);
         }
         // Real fix, 7 August 2026: the async reply lands well after the
         // earlier submit-time refocus, and appending it here is a real DOM
