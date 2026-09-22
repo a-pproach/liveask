@@ -132,7 +132,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-2';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-3';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -3935,7 +3935,7 @@
       renderVoiceNotice('Voice conversation is paused while you create this Tour. Dictate is still available.');
       return;
     }
-    if (!window.RTCPeerConnection || (!AUTODEMO_COLLECTION_GUIDE && (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia))) {
+    if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       voiceUnavailableForSession = true;
       voicePromptEnabled = false;
       renderVoicePromptControl();
@@ -3958,16 +3958,11 @@
     try {
       await ensureVoiceAuthority(voiceStartAbort.signal);
       if (generation !== voiceGeneration) return;
-      let stream = null;
-      if (!AUTODEMO_COLLECTION_GUIDE) {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        if (generation !== voiceGeneration) { stream.getTracks().forEach(function(track){ track.stop(); }); return; }
-        voiceLocalStream = stream;
-        stream.getAudioTracks().forEach(function(track){ track.enabled = false; });
-      } else {
-        voiceLocalStream = null;
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (generation !== voiceGeneration) { stream.getTracks().forEach(function(track){ track.stop(); }); return; }
+      voiceLocalStream = stream;
       voiceMuted = true;
+      stream.getAudioTracks().forEach(function(track){ track.enabled = false; });
 
       const peer = new RTCPeerConnection();
       voicePeer = peer;
@@ -3982,11 +3977,7 @@
         const play = audio.play();
         if (play && play.catch) play.catch(function(){});
       };
-      if (AUTODEMO_COLLECTION_GUIDE) {
-        peer.addTransceiver('audio', { direction: 'recvonly' });
-      } else {
-        stream.getTracks().forEach(function(track){ peer.addTrack(track, stream); });
-      }
+      stream.getTracks().forEach(function(track){ peer.addTrack(track, stream); });
 
       const channel = peer.createDataChannel('oai-events');
       voiceDataChannel = channel;
