@@ -132,7 +132,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260921-tour-continuity-uip-2';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-2';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -2270,6 +2270,8 @@
         if (data.action) handleTourAction(data.action, quickReplyChoices);
         if (cfg.tenantId === 'autodemo-intake' && autoDemoVoiceStartPending && data.intakeStep === 'mode_selected') {
           autoDemoVoiceStartPending = false;
+          voicePromptEnabled = true;
+          renderVoicePromptControl();
           startVoice({ instruction: activeInputInstruction });
         }
         // Real fix, 7 August 2026: the async reply lands well after the
@@ -3584,7 +3586,7 @@
   }
 
   function clearVoiceUiClasses(){
-    ['is-typed', 'is-dictating', 'is-awaiting-speech', 'is-connecting', 'is-voice', 'is-speaking', 'is-muted', 'is-ending'].forEach(function(name){
+    ['is-typed', 'is-dictating', 'is-awaiting-speech', 'is-connecting', 'is-voice', 'is-guide', 'is-speaking', 'is-muted', 'is-ending'].forEach(function(name){
       uip.classList.remove(name);
     });
   }
@@ -3600,7 +3602,7 @@
     micBtn.disabled = AUTODEMO_COLLECTION_GUIDE ? true : (mode === 'connecting' || mode === 'ending');
 
     if (autoDemoGuideTextMode) {
-      uip.classList.add('is-typed', 'is-voice');
+      uip.classList.add('is-typed', 'is-guide');
       if (mode === 'speaking') uip.classList.add('is-speaking');
       if (mode === 'muted') uip.classList.add('is-muted');
       micLabel.textContent = 'Muted';
@@ -4026,7 +4028,7 @@
           sdpOffer: peer.localDescription.sdp,
           textHistory: conversationHistory,
           canonicalHistory: conversationHistory,
-          structuredInstruction: promptInstruction && voicePromptEnabled ? promptInstruction : null
+          structuredInstruction: promptInstruction && (voicePromptEnabled || AUTODEMO_COLLECTION_GUIDE) ? promptInstruction : null
         }),
         signal: voiceStartAbort.signal
       });
