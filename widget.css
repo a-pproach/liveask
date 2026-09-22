@@ -349,7 +349,7 @@
    control remains Send. The microphone surface is visible only as a
    locked-muted status. */
 .ask-uip.is-guide .ask-input-row textarea,.ask-uip.is-guide .ask-fake-placeholder{display:block}
-.ask-uip.is-guide .ask-liveask-inline,.ask-uip.is-guide .ask-voice-status{display:block;opacity:1}
+.ask-uip.is-guide .ask-voice-status{display:none}
 .ask-uip.is-guide .ask-voice-wave,.ask-uip.is-guide .ask-stop-square{display:none}
 .ask-uip.is-guide .ask-send-arrow{display:block}
 .ask-uip.is-guide .ask-send{background:#3b82f6;box-shadow:0 2px 7px rgba(59,130,246,.28)}
