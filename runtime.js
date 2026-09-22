@@ -132,7 +132,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-4';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-5';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -2021,7 +2021,14 @@
           return;
         }
         if (cfg.tenantId === 'autodemo-intake' && choice === 'Use Voice') {
+          // Start WebRTC directly inside the visitor's click gesture.
+          // Waiting for the intake POST to return loses the browser's
+          // transient user-activation token, which can cause remote
+          // audio.play() to be blocked silently by autoplay policy.
           autoDemoVoiceStartPending = true;
+          voicePromptEnabled = true;
+          renderVoicePromptControl();
+          startVoice({ instruction: null });
           submitToPanel(choice, { showVisitorBubble: true });
           return;
         }
@@ -2273,15 +2280,11 @@
           voicePromptEnabled = true;
           renderVoicePromptControl();
 
-          // AutoDemo Voice is a speaking guide only. Start the ordinary,
-          // already-proven Voice transport first, then queue the current
-          // workflow instruction onto the trusted control socket. This is
-          // the same post-attach path used by Guided Tours and by every
-          // later workflow instruction; do not rely on a special
-          // start-session prompt to make the first instruction audible.
-          const guideInstruction = activeInputInstruction;
-          startVoice({ instruction: null });
-          if (guideInstruction) syncActiveWorkflowToVoice(guideInstruction, true);
+          // Voice transport was started synchronously by the visitor's
+          // Use Voice click so browser autoplay permission is preserved.
+          // Once the deterministic collection step arrives, announce it
+          // through the existing governed workflow-sync channel.
+          if (activeInputInstruction) syncActiveWorkflowToVoice(activeInputInstruction, true);
         }
         // Real fix, 7 August 2026: the async reply lands well after the
         // earlier submit-time refocus, and appending it here is a real DOM
