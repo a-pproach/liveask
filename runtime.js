@@ -3421,15 +3421,11 @@
       // Start new chat — omitted entirely while a Tour is active (Section
       // 5.1.B, confirmed 27 August 2026), and only offered at all once
       // there's a real conversation to clear.
-      if (!tourToken && conversationHistory.length > 0) {
-        liveAskItems.push({ label: 'Start new chat', onClick: startNewChatConfirm });
-      }
+      liveAskItems.push({ label: 'Start new chat', onClick: startNewChatConfirm });
       liveAskItems.push({ label: 'Give feedback', onClick: giveFeedbackFlow });
       // Restart Tour — contextual only (Section 5.1.D): shown only while a
       // Tour is actually active.
-      if (tourToken) {
-        liveAskItems.push({ label: 'Restart Tour', onClick: restartTourConfirm });
-      }
+
       liveAskItems.push({ label: 'Admin', onClick: adminPinEntry });
       renderChoiceButtons(body, liveAskItems.map(function(it){ return { label: it.label, value: it }; }), function(it){ it.onClick(); });
 
