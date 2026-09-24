@@ -2987,6 +2987,29 @@
   }
 
   // ---- Manage Tours (Section 8.4) ----
+  function copyManageTourText(value){
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(value);
+    }
+    return new Promise(function(resolve, reject){
+      const temp = document.createElement('textarea');
+      temp.value = value;
+      temp.setAttribute('readonly', '');
+      temp.style.position = 'fixed';
+      temp.style.opacity = '0';
+      document.body.appendChild(temp);
+      temp.select();
+      try {
+        if (!document.execCommand('copy')) throw new Error('copy_failed');
+        resolve();
+      } catch (err) {
+        reject(err);
+      } finally {
+        temp.remove();
+      }
+    });
+  }
+
   function adminManageToursList(){
     renderSecondaryPanel('Manage Tours', function(body){
       body.textContent = 'Loading…';
@@ -3007,7 +3030,7 @@
             row.className = 'ask-popover-tourrow';
             row.innerHTML = '<div class="txt"><div class="ttl"></div><div class="meta"></div></div><span class="chev" aria-hidden="true">›</span>';
             row.querySelector('.ttl').textContent = t.tourName || t.guestName || '(untitled tour)';
-            row.querySelector('.meta').textContent = t.guestName ? ('Guest: ' + t.guestName) : 'Multiple recipients';
+            row.querySelector('.meta').textContent = (t.guestName ? ('Guest: ' + t.guestName) : 'Multiple recipients') + (t.isDefault ? ' · Default Tour' : '');
             row.addEventListener('click', function(){ adminManageToursDetail(t.token); });
             body.appendChild(row);
           });
@@ -3051,6 +3074,12 @@
         pill.textContent = expired ? 'Expired' : 'Active';
         head.appendChild(title);
         head.appendChild(pill);
+        if (t.isDefault) {
+          const defaultPill = document.createElement('span');
+          defaultPill.className = 'ask-popover-status-pill ask-popover-status-pill--active';
+          defaultPill.textContent = 'DEFAULT';
+          head.appendChild(defaultPill);
+        }
         body.appendChild(head);
 
         const meta = document.createElement('div');
@@ -3058,11 +3087,16 @@
         const rows = [
           ['Guest', t.guestName || 'Multiple recipients'],
           ['Stops', t.destinations.join(' → ')],
+          ['Tour token', t.token],
+          ['Tour URL', t.tourUrl],
+          ['RA email', t.raEmail || 'Not recorded'],
           ['Locked in', t.lockedIn ? 'Yes' : 'No (still a draft)'],
           ['Guest visits recorded', String(t.guestSessions)],
           ['RA preview runs recorded', String(t.previewSessions)]
         ];
-        if (t.expiresAt) {
+        if (t.isDefault) {
+          rows.push(['Expiry', 'Does not expire']);
+        } else if (t.expiresAt) {
           rows.push([expired ? 'Expired' : 'Expires', new Date(t.expiresAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })]);
         }
         rows.forEach(function(pair){
@@ -3080,27 +3114,72 @@
         });
         body.appendChild(meta);
 
+        const copyStatus = document.createElement('div');
+        copyStatus.className = 'ask-popover-note';
+        renderActions(body, [
+          { label: 'Copy token', onClick: function(){
+            copyManageTourText(t.token).then(function(){ copyStatus.textContent = 'Tour token copied.'; }).catch(function(){ copyStatus.textContent = 'Could not copy the token automatically.'; });
+          } },
+          { label: 'Copy Tour link', onClick: function(){
+            copyManageTourText(t.tourUrl).then(function(){ copyStatus.textContent = 'Tour link copied.'; }).catch(function(){ copyStatus.textContent = 'Could not copy the link automatically.'; });
+          } }
+        ]);
+        body.appendChild(copyStatus);
+
         const actions = document.createElement('div');
         actions.className = 'ask-popover-detail-actions';
         body.appendChild(actions);
         // Ordinary actions get the standard nav-row treatment; Revoke is
         // visually separated toward the bottom with the destructive
         // treatment (Section 8's explicit requirement) via danger:true.
-        renderNavRows(actions, [
+        const actionRows = [
           { label: 'Run/Test', value: 'preview' },
           { label: 'Edit', value: 'edit' },
+          { label: 'Resend link to RA email', value: 'resend' },
           { label: 'Duplicate', value: 'duplicate' },
-          { label: 'Extend expiry', value: 'extend' },
           { label: 'Revoke', value: 'revoke', danger: true }
-        ], function(choice){
+        ];
+        if (!t.isDefault) {
+          actionRows.splice(2, 0, { label: 'Make Default Tour', value: 'default' });
+          actionRows.splice(actionRows.length - 1, 0, { label: 'Extend expiry', value: 'extend' });
+        }
+        renderNavRows(actions, actionRows, function(choice){
           if (choice === 'preview') adminManageToursPreview(token);
           else if (choice === 'edit') adminManageToursEdit(token);
+          else if (choice === 'default') adminManageToursSetDefault(token);
+          else if (choice === 'resend') adminManageToursResendLink(token);
           else if (choice === 'duplicate') adminManageToursDuplicate(token);
           else if (choice === 'extend') adminManageToursExtend(token);
           else if (choice === 'revoke') adminManageToursRevokeConfirm(token);
         });
       });
     }, { onBack: adminManageToursList });
+  }
+
+  function adminManageToursSetDefault(token){
+    adminAction('manageToursSetDefault', { token: token }).then(function(data){
+      renderSecondaryPanel('Default Tour updated', function(body){
+        if (!data.ok) { renderPopoverError(body, data.error); return; }
+        const p = document.createElement('div');
+        p.className = 'ask-popover-note';
+        p.textContent = 'This Tour is now the non-expiring public default for the UIP and ' + data.publicUrl + '.';
+        body.appendChild(p);
+        renderActions(body, [{ label: 'Done', primary: true, onClick: function(){ adminManageToursDetail(token); } }]);
+      }, { onBack: function(){ adminManageToursDetail(token); } });
+    });
+  }
+
+  function adminManageToursResendLink(token){
+    adminAction('manageToursResendLink', { token: token }).then(function(data){
+      renderSecondaryPanel('Tour link email', function(body){
+        if (!data.ok) { renderPopoverError(body, data.error); return; }
+        const p = document.createElement('div');
+        p.className = 'ask-popover-note';
+        p.textContent = 'The Tour details and link were resent to ' + data.raEmail + '.';
+        body.appendChild(p);
+        renderActions(body, [{ label: 'Done', primary: true, onClick: function(){ adminManageToursDetail(token); } }]);
+      }, { onBack: function(){ adminManageToursDetail(token); } });
+    });
   }
 
   // Run/Test — pages through the server's already-computed narration for
@@ -3135,14 +3214,20 @@
   // index-worker.js for why this is a one-shot select rather than the
   // one-at-a-time conversational picker Tour creation uses).
   function adminManageToursEdit(token){
-    renderSecondaryPanel('Edit stops', function(body){
+    renderSecondaryPanel('Edit Tour', function(body){
       body.textContent = 'Loading…';
       adminAction('manageToursEditOptions', { token: token }).then(function(data){
         body.innerHTML = '';
         if (!data.ok) { renderPopoverError(body, data.error); return; }
         let picked = data.current.slice();
+        const notesByDestination = {};
+        data.current.forEach(function(key, index){
+          notesByDestination[key] = (data.currentStopNotes && data.currentStopNotes[index]) || '';
+        });
         const list = document.createElement('div');
+        const comments = document.createElement('div');
         body.appendChild(list);
+        body.appendChild(comments);
         function renderList(){
           list.innerHTML = '';
           data.allDestinations.forEach(function(d){
@@ -3152,16 +3237,57 @@
             const order = picked.indexOf(d.key);
             btn.textContent = (order === -1 ? '☐ ' : ('☑ ' + (order + 1) + '. ')) + d.picker;
             btn.addEventListener('click', function(){
-              if (order === -1) picked.push(d.key); else picked.splice(order, 1);
+              if (order === -1) {
+                picked.push(d.key);
+                if (notesByDestination[d.key] === undefined) notesByDestination[d.key] = '';
+              } else {
+                picked.splice(order, 1);
+              }
               renderList();
+              renderComments();
             });
             list.appendChild(btn);
           });
         }
+        function renderComments(){
+          comments.innerHTML = '';
+          picked.forEach(function(key, index){
+            const destination = data.allDestinations.find(function(item){ return item.key === key; });
+            const label = document.createElement('div');
+            label.className = 'ask-popover-section-label';
+            label.textContent = 'Comment for stop ' + (index + 1) + ': ' + (destination ? destination.picker : key);
+            comments.appendChild(label);
+            const field = document.createElement('textarea');
+            field.className = 'ask-popover-field ask-popover-field--textarea';
+            field.rows = 3;
+            field.placeholder = 'Optional guidance for LiveAsk at this stop';
+            field.value = notesByDestination[key] || '';
+            field.addEventListener('input', function(){ notesByDestination[key] = field.value; });
+            comments.appendChild(field);
+          });
+        }
         renderList();
+        renderComments();
+
+        const wrapLabel = document.createElement('div');
+        wrapLabel.className = 'ask-popover-section-label';
+        wrapLabel.textContent = 'Tour wrap-up comment';
+        body.appendChild(wrapLabel);
+        const wrapField = document.createElement('textarea');
+        wrapField.className = 'ask-popover-field ask-popover-field--textarea';
+        wrapField.rows = 3;
+        wrapField.placeholder = 'Optional guidance before the final contact offer';
+        wrapField.value = data.currentWrapNote || '';
+        body.appendChild(wrapField);
+
         renderActions(body, [
           { label: 'Save', primary: true, onClick: function(){
-            adminAction('manageToursEditConfirm', { token: token, destinations: picked }).then(function(res){
+            adminAction('manageToursEditConfirm', {
+              token: token,
+              destinations: picked,
+              stopNotes: picked.map(function(key){ return notesByDestination[key] || null; }),
+              wrapNote: wrapField.value || null
+            }).then(function(res){
               if (!res.ok) { renderPopoverError(body, res.error); return; }
               adminManageToursDetail(token);
             });

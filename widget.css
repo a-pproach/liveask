@@ -442,7 +442,7 @@
 .ask-popover-detail-row{display:flex;justify-content:space-between;gap:14px;padding:6px 0;border-bottom:1px solid var(--paper)}
 .ask-popover-detail-row:last-child{border-bottom:none}
 .ask-popover-detail-row .k{color:var(--ink-soft);flex-shrink:0}
-.ask-popover-detail-row .v{color:var(--ink);font-weight:600;text-align:right}
+.ask-popover-detail-row .v{color:var(--ink);font-weight:600;text-align:right;overflow-wrap:anywhere;min-width:0}
 .ask-popover-itemrow{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;background:none;border:none;padding:11px 10px;border-radius:8px;cursor:pointer;transition:background .12s}
 .ask-popover-itemrow:hover,.ask-popover-itemrow:focus-visible{background:rgba(0,95,174,.07)}
 .ask-popover-itemrow .txt{min-width:0}
