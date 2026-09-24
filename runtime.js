@@ -2567,6 +2567,9 @@
     const btnRect = plusBtn.getBoundingClientRect();
     const popoverRect = popover.getBoundingClientRect();
     const edgeGap = 8;
+    const viewportTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const safeTop = viewportTop + 12;
     // Leave the invoking + control visible immediately to the menu's left;
     // this preserves the familiar press-again-to-close option without the
     // icon colliding with the menu's final row.
@@ -2574,6 +2577,11 @@
     const maximumLeft = Math.max(edgeGap, boxRect.width - popoverRect.width - edgeGap);
 
     popover.style.left = Math.max(edgeGap, Math.min(requestedLeft, maximumLeft)) + 'px';
+    // Keep the complete modal below the visible viewport edge. Long Manage
+    // Tours screens scroll inside the modal instead of allowing their header
+    // to rise behind browser chrome or above the desktop viewport.
+    const availableHeight = Math.max(120, boxRect.bottom - safeTop);
+    popover.style.maxHeight = Math.min(viewportHeight * 0.60, availableHeight) + 'px';
     // Secondary controls belong to the LiveAsk surface, not the host page.
     // Overlay the UIP and align the two bottom borders instead of opening
     // beneath it and consuming the customer's website area.
@@ -2593,6 +2601,9 @@
     opts = opts || {};
     popover.classList.toggle('ask-popover--root-menu', opts.rootMenu === true);
     popover.innerHTML = '';
+    // Each modal screen starts at its own top. Without this, selecting a Tour
+    // inherited the list's scroll offset and concealed the detail header.
+    popover.scrollTop = 0;
     if (opts.onBack) {
       const back = document.createElement('button');
       back.type = 'button';
