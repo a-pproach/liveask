@@ -1436,6 +1436,143 @@
     color: #FFFFFF;
   }
 
+  /* ============================================================
+     PRICING — new section, 24 September 2026. Reuses the exact
+     starters-heading/enh-block/starter-chip system already established
+     above rather than introducing a parallel design language.
+     ============================================================ */
+
+  .pricing-section {
+    background: var(--paper);
+    padding: 56px 0 60px;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .pricing-section .starters-heading {
+    text-align: left;
+  }
+
+  .pricing-core {
+    max-width: 620px;
+    margin: 30px 0 0;
+    text-align: left;
+  }
+
+  .pricing-core .pricing-line {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+
+  .pricing-core .pricing-line + .pricing-line {
+    margin-top: 6px;
+  }
+
+  .pricing-core .pricing-amount {
+    color: var(--liveask-blue);
+  }
+
+  .pricing-core .pricing-includes {
+    margin: 16px 0 0;
+    max-width: 520px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--liveask-charcoal);
+  }
+
+  /* ---------- Initial Deployment Cohort — deliberately quiet, 24
+     September 2026 revision. Informational, not promotional: no cards,
+     no colour-coded eyebrow labels, no full-size CTA buttons. A short
+     heading, one plain sentence, then two compact lines each closed
+     with a small, low-emphasis pill. ---------- */
+
+  .cohort-heading {
+    margin: 48px 0 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink);
+    text-align: left;
+  }
+
+  .cohort-sub {
+    margin: 6px 0 20px;
+    max-width: 560px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--liveask-charcoal);
+    text-align: left;
+  }
+
+  .offer-list {
+    max-width: 620px;
+    background: #FAFBFC;
+    border-radius: 10px;
+    padding: 4px 20px;
+  }
+
+  .offer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 0;
+  }
+
+  .offer-row + .offer-row {
+    border-top: 1px solid var(--hairline);
+  }
+
+  .offer-text {
+    min-width: 0;
+  }
+
+  .offer-text .offer-title {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .offer-text .offer-title .offer-price {
+    font-weight: 600;
+    color: var(--liveask-charcoal);
+  }
+
+  .offer-text .offer-note {
+    margin: 3px 0 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--liveask-charcoal);
+    opacity: 0.85;
+  }
+
+  .offer-enquire-pill {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    background: var(--liveask-blue);
+    border: none;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #FFFFFF;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s ease;
+  }
+
+  .offer-enquire-pill:hover {
+    background: #004E93;
+  }
+
+  @media (max-width: 640px) {
+    .pricing-core .pricing-line { font-size: 19px; }
+    .offer-row { flex-wrap: wrap; row-gap: 8px; }
+  }
+
   /* ---------- CTA Wizard callout ---------- */
 
   .wizard-callout {
@@ -2720,6 +2857,38 @@
       <p class="enh-body">CTA Wizard analyses your website and identifies moments where a visitor may hesitate, need clarification or benefit from a conversation &mdash; then recommends where QuickStarts and QuickAsks could help.</p>
     </div>
 
+  </div>
+</section>
+
+<section class="pricing-section" id="liveask-pricing">
+  <div class="wrap">
+    <h2 class="starters-heading">Pricing</h2>
+
+    <div class="pricing-core">
+      <p class="pricing-line">LiveAsk deployment from <span class="pricing-amount">A$2,000</span></p>
+      <p class="pricing-line">Managed service from <span class="pricing-amount">A$199/mth</span></p>
+      <p class="pricing-includes">Includes ongoing LiveAsk service, SMS lead verification, and an initial runtime usage allowance.</p>
+    </div>
+
+    <h3 class="cohort-heading">Initial Deployment Cohort</h3>
+    <p class="cohort-sub">Limited Founding Business and Agency Partner allocations are currently available by application.</p>
+
+    <div class="offer-list">
+      <div class="offer-row">
+        <div class="offer-text">
+          <p class="offer-title">Founding Business — <span class="offer-price">Deployment at A$600</span></p>
+        </div>
+        <button type="button" class="offer-enquire-pill" data-nav-intent="my-business">Enquire</button>
+      </div>
+
+      <div class="offer-row">
+        <div class="offer-text">
+          <p class="offer-title">Founding Agency Partners — <span class="offer-price">Bundled launch pack available</span></p>
+          <p class="offer-note">Designed for web developers, digital agencies, and marketing partners deploying LiveAsk for clients.</p>
+        </div>
+        <button type="button" class="offer-enquire-pill" data-nav-intent="liveask-partners">Enquire</button>
+      </div>
+    </div>
   </div>
 </section>
 
