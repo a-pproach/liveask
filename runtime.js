@@ -2581,7 +2581,8 @@
     // Tours screens scroll inside the modal instead of allowing their header
     // to rise behind browser chrome or above the desktop viewport.
     const availableHeight = Math.max(120, boxRect.bottom - safeTop);
-    popover.style.maxHeight = Math.min(viewportHeight * 0.60, availableHeight) + 'px';
+    const viewportHeightRatio = popover.classList.contains('ask-popover--root-menu') ? 0.75 : 0.60;
+    popover.style.maxHeight = Math.min(viewportHeight * viewportHeightRatio, availableHeight) + 'px';
     // Secondary controls belong to the LiveAsk surface, not the host page.
     // Overlay the UIP and align the two bottom borders instead of opening
     // beneath it and consuming the customer's website area.
@@ -3540,12 +3541,8 @@
   }
 
   // ---- Root `+` menu (Section 5, 6) ----
-  // Phase 2 UI refinement pass (Section 1): the customer/company section —
-  // divider, tenant heading, and its items — is only ever appended
-  // once the Quick Menu fetch confirms at least one item exists. With zero
-  // configured items, none of that renders (no divider, no heading, no
-  // "Nothing here yet." message) — the menu just ends after LiveAsk's own
-  // items, rather than flashing a "Loading…" placeholder first.
+  // The customer/business heading is always present so the lower section
+  // remains clearly identified even when no Quick Menu items are configured.
   function openPlusMenu(){
     adminAuthed = null;
     renderSecondaryPanel(null, function(body){
@@ -3566,17 +3563,17 @@
       liveAskItems.push({ label: 'Admin', onClick: adminPinEntry });
       renderChoiceButtons(body, liveAskItems.map(function(it){ return { label: it.label, value: it }; }), function(it){ it.onClick(); });
 
+      const divider = document.createElement('div');
+      divider.className = 'ask-popover-divider';
+      body.appendChild(divider);
+
+      const customerLabel = document.createElement('div');
+      customerLabel.className = 'ask-popover-section-label';
+      customerLabel.textContent = 'YOUR BUSINESS MENU';
+      body.appendChild(customerLabel);
+
       fetchQuickMenuItems().then(function(items){
         if (items.length === 0) return;
-        const divider = document.createElement('div');
-        divider.className = 'ask-popover-divider';
-        body.appendChild(divider);
-
-        const customerLabel = document.createElement('div');
-        customerLabel.className = 'ask-popover-section-label';
-        customerLabel.textContent = DEPLOYMENT_COMPANY_NAME;
-        body.appendChild(customerLabel);
-
         renderChoiceButtons(body, items.map(function(it){ return { label: it.title, value: it }; }), runQuickMenuItem);
         positionPopover();
       });
