@@ -1980,7 +1980,7 @@
       'Take Tour with Voice', 'Take Tour with Text',
       'Pause Tour', 'Continue Tour', 'Next stop',
       'End tour', 'End Tour', 'Conclude Tour',
-      'Phone', 'Email', 'Not yet'
+      'Phone', 'Email', 'Not yet', 'Yes', 'No'
     ]);
     const normalizedChoices = Array.isArray(choices) ? choices : [];
     const compactTourControls = !!tourToken && normalizedChoices.length > 0 &&
@@ -2012,6 +2012,11 @@
         // same #askRow2 (in .ask-row2-right) and must stay usable while a
         // choice submission is in flight, not get swept up by this guard.
         Array.prototype.forEach.call(row2Left.querySelectorAll('.ask-quickreply-btn'), function(b){ b.disabled = true; });
+        if (tourSafetyGateActive && (choice === 'Yes' || choice === 'No')) {
+          if (!voiceControlSocket || voiceControlSocket.readyState !== 1 || !tourSafetyGateId) return;
+          voiceControlSocket.send(JSON.stringify({ type: 'tour.safety.confirm', gateId: tourSafetyGateId, choice: choice.toLowerCase() }));
+          return;
+        }
         if (cfg.tenantId === 'autodemo-intake' && choice === 'Home') {
           window.location.href = 'https://liveask.au/';
           return;
@@ -3617,6 +3622,11 @@
 
   let voiceMode = 'idle';
   let voiceGeneration = 0;
+  let tourSafetyGateActive = false;
+  let tourSafetyGateId = null;
+  let tourSafetyGateTimer = null;
+  let tourSafetyPriorChoices = [];
+  let tourSafetyDisengagementFinalizing = false;
   let voicePeer = null;
   let voiceDataChannel = null;
   let voiceControlSocket = null;
@@ -3919,6 +3929,9 @@
     if (options.voiceUnavailable || options.continueInText) voiceUnavailableForSession = true;
     voiceEnding = true;
     voiceGeneration += 1;
+    if (tourSafetyGateTimer) { clearTimeout(tourSafetyGateTimer); tourSafetyGateTimer = null; }
+    tourSafetyGateActive = false;
+    tourSafetyGateId = null;
     if (voiceStartAbort) { voiceStartAbort.abort(); voiceStartAbort = null; }
     const endingSessionId = voiceSessionId;
     voiceSessionId = null;
@@ -3951,6 +3964,40 @@
     if (failedInitialTourVoice) renderRow2(['Take Tour with Text']);
   }
 
+  async function finalizeTourSafetyDisengagement(reason, status){
+    if (tourSafetyDisengagementFinalizing || !tourToken) return;
+    tourSafetyDisengagementFinalizing = true;
+    const finalStatus = status || (reason === 'inaction' ? 'Tour disengaged by user inaction' : 'Tour ended by visitor');
+    try {
+      await finishVoice({ force: true, showEnding: false, notice: finalStatus });
+      await notifyTourLifecycle('TOUR_DISENGAGED', {
+        reason: reason || 'visitor_no',
+        status: finalStatus,
+        messages: conversationHistory
+      });
+    } finally {
+      clearTourMedia({ keepState: true });
+      restoreTourShell();
+      tourPlaybackState = 'COMPLETED';
+      tourContactInputActive = false;
+      pendingTourVoiceCommand = null;
+      tourSafetyPriorChoices = [];
+      try {
+        const currentUrl = new URL(window.location.href);
+        if (currentUrl.searchParams.has('tour')) {
+          currentUrl.searchParams.delete('tour');
+          window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+        }
+      } catch (e) {}
+      tourToken = null;
+      saveSession();
+      renderRow2([]);
+      revealConversationForInput();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      tourSafetyDisengagementFinalizing = false;
+    }
+  }
+
   function voiceFailureMessage(reason){
     if (reason === 'engagement_authority_invalid') return 'Voice permission expired before connection. Please try Voice again.';
     if (reason === 'voice_session_already_active') return 'Voice is already active for this conversation. You can keep typing here while it resets.';
@@ -3961,6 +4008,47 @@
   function handleVoiceControlMessage(event){
     let data;
     try { data = JSON.parse(event.data); } catch (e) { return; }
+    if (data.type === 'tour.safety.gate') {
+      tourSafetyGateActive = true;
+      tourSafetyGateId = data.gateId || null;
+      tourSafetyPriorChoices = Array.prototype.map.call(row2Left.querySelectorAll('.ask-quickreply-btn'), function(btn){ return (btn.textContent || '').trim(); }).filter(Boolean);
+      if (voiceLocalStream) voiceLocalStream.getAudioTracks().forEach(function(track){ track.enabled = false; });
+      voiceMuted = true;
+      setVoiceUi('muted', 'Waiting for Yes or No');
+      renderRow2(['Yes', 'No']);
+      renderVoiceNotice(data.prompt || 'Would you like to continue with the tour? Please click Yes or No.');
+      if (tourSafetyGateTimer) clearTimeout(tourSafetyGateTimer);
+      tourSafetyGateTimer = setTimeout(function(){
+        const socket = voiceControlSocket;
+        const gateId = tourSafetyGateId;
+        if (socket && socket.readyState === 1 && gateId) socket.send(JSON.stringify({ type: 'tour.safety.timeout', gateId: gateId }));
+        finalizeTourSafetyDisengagement('inaction', 'Tour disengaged by user inaction');
+      }, Number(data.timeoutMs || 15000));
+      return;
+    }
+    if (data.type === 'tour.safety.resumed') {
+      if (tourSafetyGateTimer) { clearTimeout(tourSafetyGateTimer); tourSafetyGateTimer = null; }
+      tourSafetyGateActive = false;
+      tourSafetyGateId = null;
+      voiceMuted = false;
+      if (voiceLocalStream) voiceLocalStream.getAudioTracks().forEach(function(track){ track.enabled = true; });
+      setVoiceUi('listening', 'Listening…');
+      renderRow2(tourSafetyPriorChoices);
+      tourSafetyPriorChoices = [];
+      return;
+    }
+    if (data.type === 'tour.safety.disengaged') {
+      if (tourSafetyGateTimer) { clearTimeout(tourSafetyGateTimer); tourSafetyGateTimer = null; }
+      tourSafetyGateActive = false;
+      tourSafetyGateId = null;
+      const retrievalFallback = data.reason === 'retrieval_failure';
+      if (retrievalFallback) {
+        finishVoice({ force: true, continueInText: true, notice: data.status || 'Voice tour switched to Text' });
+      } else {
+        finalizeTourSafetyDisengagement(data.reason || 'visitor_no', data.status || 'Tour ended by visitor');
+      }
+      return;
+    }
     if (data.type === 'sideband.attached') {
       if (voiceAttachTimer) { clearTimeout(voiceAttachTimer); voiceAttachTimer = null; }
       if (!voiceMuted) setVoiceUi(pendingTourVoiceCommand ? 'speaking' : 'listening', pendingTourVoiceCommand ? 'Starting Tour…' : 'Listening…');
