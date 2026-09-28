@@ -1598,8 +1598,23 @@
     maybeScrollToBottom();
   }
 
+  function setTourEntryChoiceMode(active){
+    input.disabled = !!active;
+    micBtn.style.display = active ? 'none' : '';
+    sendBtn.style.display = active ? 'none' : '';
+    if (active) {
+      ph.textContent = 'Choose an option to proceed...';
+      ph.classList.add('ask-fake-placeholder--instruction');
+      ph.style.fontStyle = 'italic';
+    } else {
+      ph.classList.remove('ask-fake-placeholder--instruction');
+      ph.style.fontStyle = '';
+    }
+  }
+
   function exitTourEntryToBrowse(){
     unlockTourEntryScroll();
+    setTourEntryChoiceMode(false);
     tourToken = null;
     tourEntryRef = null;
     tourPrivacyNoticeShown = false;
@@ -1619,6 +1634,7 @@
     clearTimeout(rotateFadeTimeout);
     setFinalPlaceholder();
     ph.classList.remove('fade');
+    setTourEntryChoiceMode(true);
     askPanel.scrollIntoView({ behavior: 'auto', block: 'start' });
     lockTourEntryScroll();
 
@@ -1675,6 +1691,7 @@
       })
       .catch(function(){
         unlockTourEntryScroll();
+        setTourEntryChoiceMode(false);
         thinking.remove();
         const a = document.createElement('div');
         a.className = 'ask-msg ai';
@@ -2084,6 +2101,7 @@
       btn.addEventListener('click', async function(){
         if (tourToken && (choice === 'Take Tour with Voice' || choice === 'Take Tour with Text' || choice === 'Browse site instead')) {
           unlockTourEntryScroll();
+          setTourEntryChoiceMode(false);
         }
         // Scoped to quickreply buttons only — mic/send now live in this
         // same #askRow2 (in .ask-row2-right) and must stay usable while a
