@@ -1552,13 +1552,75 @@
   // not organically — fetch and show the fixed greeting instead (see
   // buildTourGreeting in index-worker.js). No Claude call happens for this
   // specific request; the Worker returns the greeting immediately.
+  let tourEntryScrollLock = null;
+  let tourPrivacyNoticeShown = false;
+
+  function lockTourEntryScroll(){
+    if (tourEntryScrollLock) return;
+    const html = document.documentElement;
+    const body = document.body;
+    tourEntryScrollLock = {
+      htmlOverflow: html.style.overflow,
+      htmlOverscroll: html.style.overscrollBehavior,
+      bodyOverflow: body.style.overflow,
+      bodyOverscroll: body.style.overscrollBehavior
+    };
+    html.style.overflow = 'hidden';
+    html.style.overscrollBehavior = 'none';
+    body.style.overflow = 'hidden';
+    body.style.overscrollBehavior = 'none';
+  }
+
+  function unlockTourEntryScroll(){
+    if (!tourEntryScrollLock) return;
+    const html = document.documentElement;
+    const body = document.body;
+    html.style.overflow = tourEntryScrollLock.htmlOverflow;
+    html.style.overscrollBehavior = tourEntryScrollLock.htmlOverscroll;
+    body.style.overflow = tourEntryScrollLock.bodyOverflow;
+    body.style.overscrollBehavior = tourEntryScrollLock.bodyOverscroll;
+    tourEntryScrollLock = null;
+  }
+
+  function showTourPrivacyNotice(){
+    if (!tourToken || tourPrivacyNoticeShown) return;
+    tourPrivacyNoticeShown = true;
+    const greeting = thread.querySelector('.ask-msg.ai[data-tour-entry-greeting="1"]');
+    if (greeting) {
+      const replyP = greeting.querySelector('p');
+      if (replyP) greeting.insertBefore(buildPrivacyNoticeEl(), replyP);
+    } else {
+      const noticeWrap = document.createElement('div');
+      noticeWrap.className = 'ask-msg ai';
+      noticeWrap.appendChild(buildPrivacyNoticeEl());
+      thread.appendChild(noticeWrap);
+    }
+    maybeScrollToBottom();
+  }
+
+  function exitTourEntryToBrowse(){
+    unlockTourEntryScroll();
+    tourToken = null;
+    tourEntryRef = null;
+    tourPrivacyNoticeShown = false;
+    restoreTourShell();
+    renderRow2([]);
+    setFinalPlaceholder();
+    ph.classList.remove('fade');
+    saveSession();
+    syncDefaultTourButton();
+  }
+
   function beginTourEntry(){
+    tourPrivacyNoticeShown = false;
     askPanel.querySelector('.ask-box').classList.add('expanded');
     thread.classList.add('active');
     clearInterval(rotateTimer); rotateTimer = null;
     clearTimeout(rotateFadeTimeout);
     setFinalPlaceholder();
     ph.classList.remove('fade');
+    askPanel.scrollIntoView({ behavior: 'auto', block: 'start' });
+    lockTourEntryScroll();
 
     const thinking = beginIdentity();
 
@@ -1576,13 +1638,14 @@
         beginAnswering(thinking);
         completeIdentity(thinking);
         const replyText = data.reply || "Welcome! Something went wrong setting up your tour — try refreshing, or just ask a question below.";
-        const showPrivacyNotice = isFirstAiReply();
+        const showPrivacyNotice = false; // Tour entry is a choice gate, not yet a disclosure interaction.
         conversationHistory.push(conversationMessage('assistant', replyText, data.canonicalEvent || {
           source: 'liveask_workflow', event_type: 'workflow_prompt'
         }));
         saveSession();
         const a = document.createElement('div');
         a.className = 'ask-msg ai';
+        a.dataset.tourEntryGreeting = '1';
         a.innerHTML = '<p></p>';
         const replyP = a.querySelector('p');
         if (showPrivacyNotice) {
@@ -1611,6 +1674,7 @@
         // pull the keyboard back open.
       })
       .catch(function(){
+        unlockTourEntryScroll();
         thinking.remove();
         const a = document.createElement('div');
         a.className = 'ask-msg ai';
@@ -1977,7 +2041,7 @@
     // controls. Authoring/configuration choice sets must retain their normal
     // wrapping layout instead of being forced into one horizontal strip.
     const TOUR_COMPACT_CHOICES = new Set([
-      'Take Tour with Voice', 'Take Tour with Text',
+      'Take Tour with Voice', 'Take Tour with Text', 'Browse site instead',
       'Pause Tour', 'Continue Tour', 'Next stop',
       'End tour', 'End Tour', 'Conclude Tour',
       'Phone', 'Email', 'Not yet', 'Yes', 'No'
@@ -1994,20 +2058,33 @@
     // displayed markup differs. Every other quick-reply anywhere else in
     // this file is entirely unaffected: this is checked before falling
     // back to the exact original textContent assignment.
-    const MOBILE_SHORT_LABELS = {
+    const TOUR_ENTRY_LABELS = {
       'Take Tour with Voice': 'Voice Tour',
-      'Take Tour with Text': 'Text Tour'
+      'Take Tour with Text': 'Text Tour',
+      'Browse site instead': 'Browse site instead'
     };
     (choices || []).forEach(function(choice){
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'ask-quickreply-btn';
-      if (MOBILE_SHORT_LABELS[choice]) {
-        btn.innerHTML = '<span class="ask-quickreply-long">' + choice + '</span><span class="ask-quickreply-short">' + MOBILE_SHORT_LABELS[choice] + '</span>';
+      if (TOUR_ENTRY_LABELS[choice]) {
+        btn.textContent = TOUR_ENTRY_LABELS[choice];
+        if (choice === 'Take Tour with Voice') {
+          btn.style.background = '#0A8442';
+          btn.style.borderColor = '#0A8442';
+          btn.style.color = '#fff';
+        } else if (choice === 'Take Tour with Text') {
+          btn.style.background = '#005FAE';
+          btn.style.borderColor = '#005FAE';
+          btn.style.color = '#fff';
+        }
       } else {
         btn.textContent = choice;
       }
       btn.addEventListener('click', async function(){
+        if (tourToken && (choice === 'Take Tour with Voice' || choice === 'Take Tour with Text' || choice === 'Browse site instead')) {
+          unlockTourEntryScroll();
+        }
         // Scoped to quickreply buttons only — mic/send now live in this
         // same #askRow2 (in .ask-row2-right) and must stay usable while a
         // choice submission is in flight, not get swept up by this guard.
@@ -2023,6 +2100,10 @@
         }
         if (cfg.tenantId === 'autodemo-intake' && choice === 'Take Tour') {
           window.location.href = 'https://liveask.au/tour?ref=demo-complete';
+          return;
+        }
+        if (tourToken && choice === 'Browse site instead') {
+          exitTourEntryToBrowse();
           return;
         }
         if (cfg.tenantId === 'autodemo-intake' && choice === 'Use Voice') {
@@ -2087,7 +2168,11 @@
           sendTourVoiceCommand(voiceCommand, choice);
           return;
         }
-        if (tourToken && choice === 'Take Tour with Text') pinTourPanel();
+        if (tourToken && choice === 'Take Tour with Text') {
+          pinTourPanel();
+          setFinalPlaceholder();
+          ph.textContent = 'Type a question here or ask with voice';
+        }
         submitToPanel(choice, { showVisitorBubble: true });
       });
       row2Left.appendChild(btn);
@@ -2322,6 +2407,7 @@
   function send(){
     const q = input.value.trim();
     if(!q) return;
+    if (tourToken) showTourPrivacyNotice();
     input.value = '';
     input.closest('.ask-input-row').classList.remove('has-text');
     input.style.height = 'auto';
@@ -3692,6 +3778,8 @@
   function startTourVoiceCommand(command){
     if (!tourToken || voiceSessionIsOpen()) return;
     pinTourPanel();
+    setFinalPlaceholder();
+    ph.textContent = 'Type a question here or ask with voice';
     askPanel.classList.add('tour-voice-mode');
     appendTourVoiceCommand(command);
     pendingTourVoiceCommand = command;
@@ -4383,6 +4471,7 @@
   micBtn.addEventListener('click', function(){
     if (AUTODEMO_COLLECTION_GUIDE) return;
     if (voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted') {
+      if (tourToken && voiceMode === 'muted') showTourPrivacyNotice();
       toggleVoiceMute();
       return;
     }
