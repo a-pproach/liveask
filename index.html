@@ -1437,14 +1437,13 @@
   }
 
   /* ============================================================
-     PRICING — new section, 24 September 2026. Reuses the exact
-     starters-heading/enh-block/starter-chip system already established
-     above rather than introducing a parallel design language.
+     PRICING — Founding-first presentation, 28 September 2026.
+     Keeps LiveAsk site typography/colour system and existing intent wiring.
      ============================================================ */
 
   .pricing-section {
     background: var(--paper);
-    padding: 56px 0 60px;
+    padding: 56px 0 64px;
     border-top: 1px solid var(--hairline);
   }
 
@@ -1452,125 +1451,163 @@
     text-align: left;
   }
 
-  .pricing-core {
-    max-width: 620px;
-    margin: 30px 0 0;
-    text-align: left;
-  }
-
-  .pricing-core .pricing-line {
-    margin: 0;
-    font-size: 22px;
+  .founding-offers-heading {
+    margin: 34px 0 18px;
+    font-size: 25px;
+    line-height: 1.2;
     font-weight: 800;
     color: var(--ink);
-    line-height: 1.4;
   }
 
-  .pricing-core .pricing-line + .pricing-line {
-    margin-top: 6px;
+  .founding-business-card {
+    max-width: 860px;
+    border: 2px solid var(--liveask-blue);
+    border-radius: 18px;
+    padding: 28px 30px;
+    box-shadow: 0 8px 24px rgba(0,95,175,0.08);
   }
 
-  .pricing-core .pricing-amount {
+  .founding-business-eyebrow {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--liveask-blue);
   }
 
-  .pricing-core .pricing-includes {
-    margin: 16px 0 0;
-    max-width: 520px;
+  .founding-business-row,
+  .founding-partner-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+  }
+
+  .founding-business-copy,
+  .founding-partner-copy {
+    min-width: 0;
+  }
+
+  .founding-business-title {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.22;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .founding-business-title .price {
+    color: var(--liveask-blue);
+  }
+
+  .founding-business-desc {
+    margin: 10px 0 0;
+    max-width: 650px;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--liveask-charcoal);
+  }
+
+  .founding-business-anchor {
+    margin: 8px 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .founding-cta {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 999px;
+    padding: 11px 18px;
+    background: var(--liveask-blue);
+    color: #FFFFFF;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .founding-cta:hover {
+    background: #004E93;
+  }
+
+  .founding-partner-card {
+    max-width: 860px;
+    margin-top: 16px;
+    padding: 22px 28px;
+    background: #F7F8FA;
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+  }
+
+  .founding-partner-title {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.35;
+    font-weight: 750;
+    color: var(--ink);
+  }
+
+  .founding-partner-desc {
+    margin: 5px 0 0;
+    max-width: 650px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--liveask-charcoal);
+  }
+
+  .founding-partner-card .founding-cta {
+    padding: 9px 17px;
+    font-size: 12px;
+  }
+
+  .standard-pricing {
+    max-width: 860px;
+    margin-top: 44px;
+    padding-top: 22px;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .standard-pricing h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .standard-pricing p {
+    margin: 2px 0;
     font-size: 14px;
     line-height: 1.55;
     color: var(--liveask-charcoal);
   }
 
-  /* ---------- Initial Deployment Cohort — deliberately quiet, 24
-     September 2026 revision. Informational, not promotional: no cards,
-     no colour-coded eyebrow labels, no full-size CTA buttons. A short
-     heading, one plain sentence, then two compact lines each closed
-     with a small, low-emphasis pill. ---------- */
-
-  .cohort-heading {
-    margin: 48px 0 0;
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--ink);
-    text-align: left;
-  }
-
-  .cohort-sub {
-    margin: 6px 0 20px;
-    max-width: 560px;
-    font-size: 13.5px;
-    line-height: 1.5;
-    color: var(--liveask-charcoal);
-    text-align: left;
-  }
-
-  .offer-list {
-    max-width: 620px;
-    background: #FAFBFC;
-    border-radius: 10px;
-    padding: 4px 20px;
-  }
-
-  .offer-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 0;
-  }
-
-  .offer-row + .offer-row {
-    border-top: 1px solid var(--hairline);
-  }
-
-  .offer-text {
-    min-width: 0;
-  }
-
-  .offer-text .offer-title {
-    margin: 0;
-    font-size: 14.5px;
-    font-weight: 700;
+  .standard-pricing strong {
     color: var(--ink);
   }
 
-  .offer-text .offer-title .offer-price {
-    font-weight: 600;
-    color: var(--liveask-charcoal);
-  }
-
-  .offer-text .offer-note {
-    margin: 3px 0 0;
-    font-size: 12.5px;
-    line-height: 1.45;
-    color: var(--liveask-charcoal);
-    opacity: 0.85;
-  }
-
-  .offer-enquire-pill {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 16px;
-    background: var(--liveask-blue);
-    border: none;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #FFFFFF;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s ease;
-  }
-
-  .offer-enquire-pill:hover {
-    background: #004E93;
-  }
-
-  @media (max-width: 640px) {
-    .pricing-core .pricing-line { font-size: 19px; }
-    .offer-row { flex-wrap: wrap; row-gap: 8px; }
+  @media (max-width: 720px) {
+    .pricing-section { padding: 42px 0 48px; }
+    .founding-offers-heading { font-size: 22px; margin-top: 26px; }
+    .founding-business-card { padding: 22px 20px; }
+    .founding-business-row,
+    .founding-partner-row {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .founding-business-title { font-size: 24px; }
+    .founding-business-desc { font-size: 14.5px; }
+    .founding-cta { width: 100%; }
+    .founding-partner-card { padding: 20px; }
+    .standard-pricing { margin-top: 34px; }
   }
 
   /* ---------- CTA Wizard callout ---------- */
@@ -2864,30 +2901,34 @@
   <div class="wrap">
     <h2 class="starters-heading">Pricing</h2>
 
-    <div class="pricing-core">
-      <p class="pricing-line">LiveAsk deployment from <span class="pricing-amount">A$2,000</span></p>
-      <p class="pricing-line">Managed service from <span class="pricing-amount">A$199/mth</span></p>
-      <p class="pricing-includes">Includes ongoing LiveAsk service, SMS lead verification, and an initial runtime usage allowance.</p>
+    <h3 class="founding-offers-heading">Founding Offers</h3>
+
+    <div class="founding-business-card">
+      <p class="founding-business-eyebrow">Founding Business</p>
+      <div class="founding-business-row">
+        <div class="founding-business-copy">
+          <p class="founding-business-title">Deployment at <span class="price">A$600</span></p>
+          <p class="founding-business-desc">A limited introductory opportunity for businesses joining LiveAsk during its Founding rollout.</p>
+          <p class="founding-business-anchor">Standard LiveAsk deployment from A$2,000.</p>
+        </div>
+        <button type="button" class="founding-cta" data-nav-intent="my-business">Get details on Founding offer</button>
+      </div>
     </div>
 
-    <h3 class="cohort-heading">Initial Deployment Cohort</h3>
-    <p class="cohort-sub">Limited Founding Business and Agency Partner allocations are currently available by application.</p>
-
-    <div class="offer-list">
-      <div class="offer-row">
-        <div class="offer-text">
-          <p class="offer-title">Founding Business — <span class="offer-price">Deployment at A$600</span></p>
+    <div class="founding-partner-card">
+      <div class="founding-partner-row">
+        <div class="founding-partner-copy">
+          <p class="founding-partner-title">Founding Agency Partners — Bundled launch pack available</p>
+          <p class="founding-partner-desc">For web developers, digital agencies and marketing partners deploying LiveAsk for clients.</p>
         </div>
-        <button type="button" class="offer-enquire-pill" data-nav-intent="my-business">Enquire</button>
+        <button type="button" class="founding-cta" data-nav-intent="liveask-partners">Enquire</button>
       </div>
+    </div>
 
-      <div class="offer-row">
-        <div class="offer-text">
-          <p class="offer-title">Founding Agency Partners — <span class="offer-price">Bundled launch pack available</span></p>
-          <p class="offer-note">Designed for web developers, digital agencies, and marketing partners deploying LiveAsk for clients.</p>
-        </div>
-        <button type="button" class="offer-enquire-pill" data-nav-intent="liveask-partners">Enquire</button>
-      </div>
+    <div class="standard-pricing">
+      <h3>Standard Pricing</h3>
+      <p>LiveAsk deployment from <strong>A$2,000</strong></p>
+      <p>Managed service from <strong>A$199/mth</strong></p>
     </div>
   </div>
 </section>
