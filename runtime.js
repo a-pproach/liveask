@@ -2069,6 +2069,9 @@
       'Phone', 'Email', 'Not yet', 'Yes', 'No'
     ]);
     const normalizedChoices = Array.isArray(choices) ? choices : [];
+    if (tourToken && normalizedChoices.includes('Take Tour with Voice') && normalizedChoices.includes('Take Tour with Text')) {
+      setTourEntryChoiceMode(true);
+    }
     const compactTourControls = !!tourToken && normalizedChoices.length > 0 &&
       normalizedChoices.every(function(choice){ return TOUR_COMPACT_CHOICES.has(choice); });
     row2.classList.toggle('ask-row2--tour-compact', compactTourControls);
