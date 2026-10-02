@@ -171,14 +171,17 @@
 .ask-uip.uip-pinned{position:fixed;top:0;left:var(--uip-pin-left,0);width:var(--uip-pin-width,100%);z-index:90;box-shadow:0 4px 14px rgba(29,42,58,.13)}
 .ask-panel.tour-media-active .ask-uip.uip-pinned{width:min(var(--uip-pin-width,100%),calc(100vw - 420px))}
 /* ============================================================
-   Compact two-row composer geometry — Stage 1 UX review, 10 September
-   2026. The caret typography and exact 80x20 logo geometry remain locked;
-   only the surrounding vertical whitespace is reduced. The verified
-   resting UIP is approximately 94px high at the mobile review width.
+   CARET / UIP — DO NOT REOPEN. Row geometry restored 2 October 2026.
+   CURSOR LOCK includes this row, not only the textarea typography:
+   the flex-end textarea and independently centred 20px logo align only
+   with the known-good symmetric padding:14px 16px and no min-height.
+   Asymmetric 6px/2px padding displaced the caret; min-height:48px made
+   that displacement worse. Do not reintroduce either to compact the UIP.
+   Preserve the native caret and the locked textarea values below.
    Typed content remains free to expand naturally, up to the existing
    four-line/6.6em cap.
    ============================================================ */
-.ask-input-row{position:relative;display:flex;align-items:flex-end;gap:6px;min-height:48px;padding:6px 16px 2px}
+.ask-input-row{position:relative;display:flex;align-items:flex-end;gap:6px;padding:14px 16px}
 /* Typed text — UIP refinement: 16px/450/#1f2937/1.35, replacing the
    previous 19.55px/var(--ink)/1.1. Must read with more authority than
    placeholder text, not grey and apologetic. 16 x 1.35 = 21.6px line

@@ -98,6 +98,19 @@
     $$: function (sel) { return document.querySelectorAll(sel); }
   };
 
+  // Do not paint the constructed widget before its CSS and caret font.
+  // visibility preserves layout measurements; this is not a UI state change.
+  mountEl.style.setProperty('visibility', 'hidden', 'important');
+  var widgetStylesReady = false;
+  var widgetBodyFontReady = false;
+  var resolveWidgetPaintReady;
+  var widgetPaintReady = new Promise(function(resolve){ resolveWidgetPaintReady = resolve; });
+  function revealStyledWidget(){
+    if (!widgetStylesReady || !widgetBodyFontReady) return;
+    mountEl.style.removeProperty('visibility');
+    resolveWidgetPaintReady();
+  }
+
   // ---- CSS delivery ----
   // Deliberately not an inline <style> element with textContent — that
   // is exactly what forces a customer's strict CSP into allowing
@@ -137,15 +150,18 @@
       var link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = cssUrl;
+      link.onload = function(){ widgetStylesReady = true; revealStyledWidget(); };
       shadowRoot.appendChild(link);
     }
     if ('adoptedStyleSheets' in Document.prototype && typeof CSSStyleSheet === 'function') {
       fetch(cssUrl)
-        .then(function (r) { return r.text(); })
+        .then(function (r) { if (!r.ok) throw new Error('LiveAsk stylesheet HTTP ' + r.status); return r.text(); })
         .then(function (cssText) {
           var sheet = new CSSStyleSheet();
           sheet.replaceSync(resolveRelativeCssUrls(cssText, cfg.baseUrl || ''));
           shadowRoot.adoptedStyleSheets = [sheet];
+          widgetStylesReady = true;
+          revealStyledWidget();
         })
         .catch(linkFallback);
     } else {
@@ -187,7 +203,11 @@
   // this bug does not apply, and for any future browser environment
   // where the FontFace API itself might be unavailable.
   (function loadFonts() {
-    if (typeof FontFace !== 'function' || !document.fonts) return;
+    if (typeof FontFace !== 'function' || !document.fonts) {
+      widgetBodyFontReady = true;
+      revealStyledWidget();
+      return;
+    }
     var base = cfg.baseUrl || '';
     var faces = [
       { family: 'LiveAsk Body', url: base + 'fonts/barlow-400.woff2', weight: '400' },
@@ -200,11 +220,23 @@
         var fontFace = new FontFace(f.family, "url('" + f.url + "') format('woff2')", { weight: f.weight });
         fontFace.load().then(function (loaded) {
           document.fonts.add(loaded);
+          if (f.family === 'LiveAsk Body' && f.weight === '400') {
+            widgetBodyFontReady = true;
+            revealStyledWidget();
+          }
         }).catch(function (err) {
           console.error('LiveAsk: font failed to load —', f.url, err);
+          if (f.family === 'LiveAsk Body' && f.weight === '400') {
+            widgetBodyFontReady = true; // Keep the styled Text UI available on font failure.
+            revealStyledWidget();
+          }
         });
       } catch (err) {
         console.error('LiveAsk: FontFace construction failed —', f.url, err);
+        if (f.family === 'LiveAsk Body' && f.weight === '400') {
+          widgetBodyFontReady = true;
+          revealStyledWidget();
+        }
       }
     });
   })();
@@ -680,9 +712,11 @@
   // focus-on-tap handling).
   window.addEventListener('load', function(){
     if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
+    widgetPaintReady.then(function(){
     input.blur();
     requestAnimationFrame(function(){
       input.focus({ preventScroll: true }); // real paint gap before refocus — back-to-back blur/focus can get coalesced by the browser with no gap between them
+    });
     });
   });
   function autoGrow(){
