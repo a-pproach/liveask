@@ -1077,6 +1077,8 @@
       provider_response_id: metadata.provider_response_id || metadata.providerResponseId || null,
       authority_ref: metadata.authority_ref || metadata.authorityRef || null,
       voice_session_id: metadata.voice_session_id || metadata.voiceSessionId || null,
+      sequence: metadata.sequence || null,
+      accepted_at: metadata.accepted_at || null,
       client_created_at: metadata.client_created_at || Date.now()
     };
   }
@@ -1799,6 +1801,9 @@
 
   if (conversationHistory.length > 0 && !defaultTourStarting) {
     replaySession();
+    // Replayed transcript text is not authority for current Tour controls.
+    // Reload/navigation must rehydrate them from saved Worker progress.
+    if (tourToken) notifyTourLifecycle('TOUR_STATE');
     if (tourToken && conversationHistory.some(function(message){
       return message && message.role === 'user' && (message.content === 'Take Tour with Voice' || message.content === 'Take Tour with Text' || message.content === 'Start tour');
     })) pinTourPanel();
@@ -3743,6 +3748,7 @@
   let voiceAttachTimer = null;
   let voiceIdentityEl = null;
   let pendingAssistantVoiceTranscripts = [];
+  const completedVoicePlaybackResponses = new Set();
   let pendingVoiceWorkflowSync = null;
   let pendingAutoDemoGuideSync = null;
   let pendingTourVoiceCommand = null;
@@ -3945,6 +3951,29 @@
     maybeScrollToBottom();
   }
 
+  function placeCanonicalVoiceMessage(element, metadata){
+    metadata = metadata || {};
+    if (metadata.event_id) element.dataset.canonicalEventId = metadata.event_id;
+    const sequence = Number(metadata.sequence);
+    if (sequence > 0) {
+      element.dataset.canonicalSequence = String(sequence);
+      const next = Array.from(thread.children).find(function(child){
+        return Number(child.dataset.canonicalSequence) > sequence;
+      });
+      if (next) { thread.insertBefore(element, next); return; }
+    }
+    thread.appendChild(element);
+  }
+
+  function recordCanonicalVoiceMessage(message){
+    const sequence = Number(message.sequence);
+    const next = sequence > 0 ? conversationHistory.findIndex(function(existing){
+      return Number(existing.sequence) > sequence;
+    }) : -1;
+    if (next >= 0) conversationHistory.splice(next, 0, message);
+    else conversationHistory.push(message);
+  }
+
   function appendVoiceTranscript(role, text, metadata){
     const clean = typeof text === 'string' ? text.trim() : '';
     if (!clean) return;
@@ -3968,14 +3997,14 @@
       visitor.className = 'ask-msg visitor';
       visitor.innerHTML = '<p></p>';
       visitor.querySelector('p').textContent = clean;
-      thread.appendChild(visitor);
-      conversationHistory.push(conversationMessage('user', clean, Object.assign({
+      placeCanonicalVoiceMessage(visitor, metadata);
+      recordCanonicalVoiceMessage(conversationMessage('user', clean, Object.assign({
         modality: 'voice', source: 'visitor', voice_session_id: voiceSessionId
       }, metadata || {})));
     } else {
       const assistant = createAiMessageEl(clean, isFirstAiReply());
-      thread.appendChild(assistant);
-      conversationHistory.push(conversationMessage('assistant', clean, Object.assign({
+      placeCanonicalVoiceMessage(assistant, metadata);
+      recordCanonicalVoiceMessage(conversationMessage('assistant', clean, Object.assign({
         modality: 'voice', source: 'realtime', voice_session_id: voiceSessionId
       }, metadata || {})));
       if (activateInputInstruction(clean, assistant)) syncActiveWorkflowToVoice(activeInputInstruction, false);
@@ -3994,12 +4023,22 @@
 
   function bufferAssistantVoiceTranscript(text, metadata){
     const clean = typeof text === 'string' ? text.trim() : '';
-    if (clean) pendingAssistantVoiceTranscripts.push({ text: clean, metadata: metadata || {} });
+    metadata = metadata || {};
+    if (!clean) return;
+    const responseId = metadata.provider_response_id || metadata.responseId;
+    if (responseId && completedVoicePlaybackResponses.has(responseId)) {
+      appendVoiceTranscript('assistant', clean, metadata);
+    } else pendingAssistantVoiceTranscripts.push({ text: clean, metadata: metadata });
   }
 
-  function flushAssistantVoiceTranscript(){
+  function flushAssistantVoiceTranscript(responseId, ending){
+    if (responseId) completedVoicePlaybackResponses.add(responseId);
     if (!pendingAssistantVoiceTranscripts.length) return;
-    const pending = pendingAssistantVoiceTranscripts.shift();
+    const index = ending ? 0 : pendingAssistantVoiceTranscripts.findIndex(function(pending){
+      return responseId && (pending.metadata.provider_response_id || pending.metadata.responseId) === responseId;
+    });
+    if (index < 0) return;
+    const pending = pendingAssistantVoiceTranscripts.splice(index, 1)[0];
     appendVoiceTranscript('assistant', pending.text, pending.metadata);
   }
 
@@ -4042,7 +4081,8 @@
     const endingSessionId = voiceSessionId;
     voiceSessionId = null;
     if (options.notice) pendingAssistantVoiceTranscripts = [];
-    else while (pendingAssistantVoiceTranscripts.length) flushAssistantVoiceTranscript();
+    else while (pendingAssistantVoiceTranscripts.length) flushAssistantVoiceTranscript(null, true);
+    completedVoicePlaybackResponses.clear();
     if (options.showEnding !== false && voiceMode !== 'idle') setVoiceUi('ending', 'Ending…');
     stopLocalVoiceMedia();
 
@@ -4336,7 +4376,7 @@
         try { providerEvent = JSON.parse(event.data); } catch (e) { return; }
         if (providerEvent.type === 'output_audio_buffer.started') setVoiceUi('speaking', 'Speaking…');
         if (providerEvent.type === 'output_audio_buffer.stopped') {
-          flushAssistantVoiceTranscript();
+          flushAssistantVoiceTranscript(providerEvent.response_id || (providerEvent.response && providerEvent.response.id));
           if (!voiceMuted) setVoiceUi('listening', 'Listening…');
           else setVoiceUi('muted', tourMutedStatus());
         }
