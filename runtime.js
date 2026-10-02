@@ -1417,11 +1417,27 @@
     renderRow2(data.quickReplies || []);
   }
 
-  function notifyTourLifecycle(eventName, extra){
+  function notifyTourLifecycle(eventName, extra, retryIndex){
     if (!tourToken) return Promise.resolve(null);
+    const requestedToken = tourToken;
+    const stateRetryDelays = [1000, 4000, 10000, 46000];
+    retryIndex = retryIndex || 0;
     return postWorker({
       tourLifecycle: Object.assign({ event: eventName, sessionId: sessionId, tourToken: tourToken }, extra || {})
-    }).then(function(data){ applyTourLifecycleResponse(data); return data; }).catch(function(){ return null; });
+    }).then(function(data){
+      // KV progress can lag the initial greeting at another read location.
+      // Retry only the read-only projection; never reset or advance a Tour.
+      if (eventName === 'TOUR_STATE' && data && data.ok === false && data.error === 'Tour is not active' && retryIndex < stateRetryDelays.length) {
+        return new Promise(function(resolve){
+          setTimeout(function(){
+            if (tourToken !== requestedToken) { resolve(null); return; }
+            resolve(notifyTourLifecycle(eventName, extra, retryIndex + 1));
+          }, stateRetryDelays[retryIndex]);
+        });
+      }
+      applyTourLifecycleResponse(data);
+      return data;
+    }).catch(function(){ return null; });
   }
 
   function clearTourMedia(options){
