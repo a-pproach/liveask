@@ -418,7 +418,7 @@
   }
 
   function renderVoicePromptControl(){
-    if (!activeInputInstruction || voiceUnavailableForSession) {
+    if ((!activeInputInstruction && !(tourContactVoiceGuiding && voiceSessionIsOpen())) || voiceUnavailableForSession) {
       if (voicePromptButton) voicePromptButton.remove();
       voicePromptButton = null;
       return;
@@ -1231,6 +1231,8 @@
   let activeTourMediaCard = null;
   let tourPlaybackState = tourToken ? 'INVITED' : 'IDLE';
   let tourContactInputActive = false;
+  let tourContactVoiceGuiding = false;
+  let contactSignoffResponseId = null;
   let lastTourRevision = 0;
   // Part D, 21 September 2026 — see applyTourStatePresentation's COMPLETED
   // branch for the actual guard logic and full reasoning.
@@ -2230,13 +2232,15 @@
           return;
         }
         if (tourToken && voiceSessionIsOpen() && (choice === 'Phone' || choice === 'Email' || choice === 'Not yet')) {
-          // Voice continuity is a product invariant: choosing a contact
-          // option must NOT terminate Voice. Route the choice through the
-          // existing governed Voice/Tour control path, which returns the
-          // same structured contact/OTP state used by Text, while leaving
-          // the visitor's active Voice session untouched.
+          // Physical consent uses the existing Contact/OTP authority, not
+          // Realtime interpretation. Voice remains the spoken typing guide.
+          tourContactVoiceGuiding = true;
+          tourContactInputActive = true;
+          voicePromptEnabled = true;
+          renderVoicePromptControl();
           revealConversationForInput();
-          sendTourVoiceCommand(choice, choice);
+          setVoiceUi(voiceMode, voiceStatus.textContent);
+          submitToPanel(choice, { showVisitorBubble: true, contactChoice: true });
           return;
         }
         if (tourToken && voiceSessionIsOpen() && (choice === 'Next stop' || choice === 'Continue Tour' || choice === 'End tour' || choice === 'End Tour')) {
@@ -2275,6 +2279,7 @@
   // should never look like the visitor typed words they didn't type.
   function submitToPanel(promptText, opts){
     opts = opts || {};
+    const previousContactInstruction = tourContactVoiceGuiding ? activeInputInstruction : null;
     // The visitor has acted on the currently highlighted request. Restore
     // that historical message to normal styling before rendering the next
     // turn (which may itself contain a fresh instruction).
@@ -2366,7 +2371,10 @@
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ sessionId: sessionId, messages: outgoingMessages, canonicalHistory: conversationHistory, tourToken: tourToken })
     })
-      .then(function(res){ return res.json(); })
+      .then(function(res){
+        if (!res.ok && (opts.contactChoice || previousContactInstruction)) throw new Error('contact_request_failed');
+        return res.json();
+      })
       .then(function(data){
         rememberVoiceAuthority(data);
         // AutoDemo Intake milestone seam (added for the /demo business-card
@@ -2428,6 +2436,20 @@
         if (quickReplyChoices.length) completeInputInstruction();
         else if (data.inputInstruction) presentInputInstruction(data.inputInstruction, a);
         else if (replyText) activateInputInstruction(replyText, a);
+        if (tourContactVoiceGuiding && voiceSessionIsOpen()) {
+          if (data.tourState === 'COMPLETED') {
+            completeInputInstruction();
+            syncActiveWorkflowToVoice({ kind: 'tour-complete', label: "I'll say goodbye now and let you continue with text input in the LiveAsk panel. You can use Contact later if you need it." }, true);
+          } else {
+            // Retry replies may omit a new field: keep the authoritative
+            // outstanding request visible and available for typed correction.
+            if (!activeInputInstruction && previousContactInstruction && !quickReplyChoices.length) {
+              presentInputInstruction(previousContactInstruction, a);
+            }
+            syncActiveWorkflowToVoice(activeInputInstruction, true);
+          }
+          setVoiceUi(voiceMode, voiceStatus.textContent);
+        }
         if (AUTODEMO_COLLECTION_GUIDE && voiceSessionIsOpen() && data.voiceGuide) {
           syncAutoDemoGuideToVoice(data.voiceGuide);
         }
@@ -2467,7 +2489,8 @@
         a.innerHTML = '<p></p>';
         a.querySelector('p').textContent = "That's taking longer than it should — please try again in a moment.";
         thread.appendChild(a);
-        renderRow2([]);
+        renderRow2(opts.contactChoice ? ['Phone', 'Email', 'Not yet'] : []);
+        if (previousContactInstruction) presentInputInstruction(previousContactInstruction, a);
         showFooter();
         maybeScrollToBottom();
         if (opts.refocusInput) {
@@ -3880,11 +3903,12 @@
     const payload = {
       type: 'workflow.sync',
       announce: announce !== false,
+      typedOnly: tourContactVoiceGuiding,
       instruction: {
         kind: instruction.kind,
         label: instruction.label,
         turnId: (sourceTurn && sourceTurn.turn_id) || uniqueConversationId('turn'),
-        eventId: (sourceTurn && sourceTurn.event_id) || uniqueConversationId('workflow')
+        eventId: tourContactVoiceGuiding ? uniqueConversationId('contact-guide') : ((sourceTurn && sourceTurn.event_id) || uniqueConversationId('workflow'))
       }
     };
     if (voiceControlSocket && voiceControlSocket.readyState === WebSocket.OPEN) {
@@ -3916,7 +3940,7 @@
     voiceMode = mode;
     clearVoiceUiClasses();
     voiceStatus.textContent = statusText || '';
-    const contactTextMode = tourContactInputActive && mode === 'muted';
+    const contactTextMode = (tourContactInputActive && mode === 'muted') || (tourContactVoiceGuiding && ['connecting', 'listening', 'speaking', 'muted'].indexOf(mode) !== -1);
     const autoDemoGuideTextMode = AUTODEMO_COLLECTION_GUIDE && (mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted');
     const unavailableInputMode = voiceUnavailableForSession && mode === 'idle';
     input.disabled = !(contactTextMode || autoDemoGuideTextMode) && (mode === 'connecting' || mode === 'listening' || mode === 'speaking' || mode === 'muted' || mode === 'ending');
@@ -3934,8 +3958,8 @@
 
     if (contactTextMode) {
       uip.classList.add('is-typed');
-      micLabel.textContent = 'Unmute';
-      micBtn.setAttribute('aria-label', 'Unmute microphone');
+      micLabel.textContent = voiceMuted ? 'Unmute' : 'Mute';
+      micBtn.setAttribute('aria-label', voiceMuted ? 'Unmute microphone' : 'Mute microphone');
       sendBtn.setAttribute('aria-label', 'Send message');
       return;
     }
@@ -4150,6 +4174,8 @@
       } catch (e) { /* control-channel close also releases the lease */ }
     }
     voiceMuted = false;
+    tourContactVoiceGuiding = false;
+    contactSignoffResponseId = null;
     voicePromptEnabled = false;
     renderVoicePromptControl();
     voiceEnding = false;
@@ -4427,9 +4453,16 @@
       channel.addEventListener('message', function(event){
         let providerEvent;
         try { providerEvent = JSON.parse(event.data); } catch (e) { return; }
+        if (providerEvent.type === 'response.created' && providerEvent.response && providerEvent.response.metadata && providerEvent.response.metadata.liveask_contact_signoff === 'true') {
+          contactSignoffResponseId = providerEvent.response.id;
+        }
         if (providerEvent.type === 'output_audio_buffer.started') setVoiceUi('speaking', 'Speaking…');
         if (providerEvent.type === 'output_audio_buffer.stopped') {
           flushAssistantVoiceTranscript(providerEvent.response_id || (providerEvent.response && providerEvent.response.id));
+          if (contactSignoffResponseId && providerEvent.response_id === contactSignoffResponseId) {
+            finishVoice({ force: true, showEnding: false });
+            return;
+          }
           if (!voiceMuted) setVoiceUi('listening', 'Listening…');
           else setVoiceUi('muted', tourMutedStatus());
         }
@@ -4598,9 +4631,8 @@
       if (input.value.trim()) send();
       return;
     }
-    if (tourContactInputActive && voiceMode === 'muted') {
+    if (tourContactVoiceGuiding || (tourContactInputActive && voiceMode === 'muted')) {
       if (input.value.trim()) send();
-      else toggleVoiceMute();
       return;
     }
     if (voiceMode === 'connecting' || voiceMode === 'listening' || voiceMode === 'speaking' || voiceMode === 'muted' || voiceMode === 'ending') {
