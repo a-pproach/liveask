@@ -3391,16 +3391,8 @@
   }
 
   function adminManageToursResendLink(token){
-    adminAction('manageToursResendLink', { token: token }).then(function(data){
-      renderSecondaryPanel('Tour link email', function(body){
-        if (!data.ok) { renderPopoverError(body, data.error); return; }
-        const p = document.createElement('div');
-        p.className = 'ask-popover-note';
-        p.textContent = 'The Tour details and link were resent to ' + data.raEmail + '.';
-        body.appendChild(p);
-        renderActions(body, [{ label: 'Done', primary: true, onClick: function(){ adminManageToursDetail(token); } }]);
-      }, { onBack: function(){ adminManageToursDetail(token); } });
-    });
+    // Use the same explicit canonical/campaign selection as Share.
+    adminTourShare(token);
   }
 
   // Run/Test — pages through the server's already-computed narration for
@@ -3410,6 +3402,9 @@
   // including after lock-in).
   function adminTourShare(token){
     renderSecondaryPanel('Share this Tour', function(body){
+      const explanation = document.createElement('p');
+      explanation.textContent = 'Choose the canonical link or a campaign link below. Its email and QR will use that exact URL.';
+      body.appendChild(explanation);
       const status = document.createElement('p'); body.appendChild(status);
       adminAction('manageToursRefsList',{token:token}).then(function(data){
         if (!data.ok) { status.textContent = data.error; return; }
