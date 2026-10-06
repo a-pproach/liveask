@@ -418,6 +418,18 @@
 .ask-popover-actions .btn--danger:hover{background:var(--danger-deep);border-color:var(--danger-deep)}
 .ask-popover-error{color:var(--ink-soft);font-weight:600;font-size:13.12px;padding:0 10px 6px}
 .ask-popover-note{color:var(--ink-soft);font-size:13.12px;padding:0 10px 8px}
+/* Tour sharing only: native controls must use the popover presentation,
+   and opaque token URLs must wrap without widening the menu or UIP. */
+.ask-tour-share .ask-tour-share-row{min-width:0;border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.ask-tour-share .ask-popover-title{margin:0;overflow-wrap:anywhere}
+.ask-tour-share .ask-tour-share-url{overflow-wrap:anywhere;margin:0}
+.ask-tour-share .ask-popover-actions button{font-family:var(--body);font-weight:600;line-height:1.2;border:1px solid var(--line);border-radius:8px;cursor:pointer;max-width:100%;white-space:normal}
+.ask-tour-share .ask-popover-actions .btn--liveask{color:#fff;background:var(--logo-blue);border-color:var(--logo-blue)}
+.ask-tour-share .ask-popover-actions .btn--liveask:hover{background:var(--logo-blue-deep)}
+.ask-tour-share .ask-popover-actions button:focus-visible{outline:2px solid var(--logo-blue);outline-offset:2px}
+.ask-tour-share .ask-popover-actions button:disabled{opacity:.6;cursor:default}
+.ask-tour-share img{display:block;max-width:100%;height:auto;margin:8px auto}
+.ask-tour-share a[download]{display:block;margin:8px 10px;color:var(--logo-blue);overflow-wrap:anywhere}
 .ask-popover-tourrow{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;background:none;border:none;padding:11px 10px;border-radius:8px;cursor:pointer;transition:background .12s}
 .ask-popover-tourrow:hover,.ask-popover-tourrow:focus-visible{background:rgba(0,95,174,.07)}
 .ask-popover-tourrow .txt{min-width:0}

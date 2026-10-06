@@ -110,7 +110,7 @@
   };
 
   var runtimeScript = document.createElement('script');
-  runtimeScript.src = baseUrl + 'runtime.js?v=20261006-tour-sharing-acceptance';
+  runtimeScript.src = baseUrl + 'runtime.js?v=20261006-tour-share-layout';
   runtimeScript.async = false; // preserve load-then-execute ordering relative to the config handoff above
   document.body.appendChild(runtimeScript);
 })();

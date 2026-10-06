@@ -145,7 +145,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20260922-autodemo-guide-6';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20261006-tour-share-layout';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -3402,21 +3402,25 @@
   // including after lock-in).
   function adminTourShare(token){
     renderSecondaryPanel('Share this Tour', function(body){
+      body.classList.add('ask-tour-share');
       const explanation = document.createElement('p');
+      explanation.className = 'ask-popover-note';
       explanation.textContent = 'Choose the canonical link or a campaign link below. Its email and QR will use that exact URL.';
       body.appendChild(explanation);
-      const status = document.createElement('p'); body.appendChild(status);
+      const status = document.createElement('p'); status.className='ask-popover-note'; status.setAttribute('role','status'); body.appendChild(status);
       adminAction('manageToursRefsList',{token:token}).then(function(data){
         if (!data.ok) { status.textContent = data.error; return; }
         function shareRow(label,url,qrDataUrl,record){
-          const heading = document.createElement('h3'); heading.textContent = label; body.appendChild(heading);
-          const link = document.createElement('p'); link.textContent = url; body.appendChild(link);
-          function button(text,action){ const b=document.createElement('button'); b.type='button'; b.textContent=text; b.onclick=action; body.appendChild(b); }
+          const section=document.createElement('section'); section.className='ask-tour-share-row'; body.appendChild(section);
+          const heading = document.createElement('h3'); heading.className='ask-popover-title'; heading.textContent = label; section.appendChild(heading);
+          const link = document.createElement('p'); link.className='ask-popover-note ask-tour-share-url'; link.textContent = url; section.appendChild(link);
+          const actions=[];
+          function button(text,action){ actions.push({label:text,onClick:action,primary:text==='Email link + QR',danger:text==='Disable'}); }
           button('Copy',function(){copyManageTourText(url).then(function(){status.textContent='Link copied.';}).catch(function(){status.textContent='Could not copy the link.';});});
           button('QR',function(){
             if (!/^data:image\/gif;base64,/.test(qrDataUrl)) return;
-            const image=document.createElement('img'); image.src=qrDataUrl; image.alt='QR code for '+url; image.width=246; body.appendChild(image);
-            const download=document.createElement('a'); download.href=qrDataUrl; download.download='liveask-tour-'+(record ? record.ref:'canonical')+'.gif'; download.textContent='Download QR'; body.appendChild(download);
+            const image=document.createElement('img'); image.src=qrDataUrl; image.alt='QR code for '+url; image.width=246; section.appendChild(image);
+            const download=document.createElement('a'); download.href=qrDataUrl; download.download='liveask-tour-'+(record ? record.ref:'canonical')+'.gif'; download.textContent='Download QR'; section.appendChild(download);
           });
           button('Email link + QR',function(){
             adminAction('manageToursShareEmail',{token:token,ref:record ? record.ref:null}).then(function(result){status.textContent=result.ok ? 'Your email with matching link and QR has been sent.':result.error;});
@@ -3425,17 +3429,18 @@
             if (!window.confirm('Disable this campaign link? The Tour and other links remain unchanged.')) return;
             adminAction('manageToursRefDisable',{token:token,ref:record.ref,revision:record.revision}).then(function(result){if(result.ok)adminTourShare(token);else status.textContent=result.error;});
           });
+          renderActions(section,actions);
         }
         shareRow('Canonical Tour link',data.url,data.qrDataUrl,null);
         data.refs.forEach(function(record){shareRow(record.ref+(record.status==='disabled' ? ' — disabled':''),record.url,record.qrDataUrl,record);});
-        const field=document.createElement('input'); field.type='text';field.maxLength=40;field.placeholder='e.g. summit1';field.setAttribute('aria-label','New campaign ref');body.appendChild(field);
-        const add=document.createElement('button');add.type='button';add.textContent='Add campaign link';body.appendChild(add);
-        add.onclick=function(){
+        const field=document.createElement('input'); field.className='ask-popover-field';field.type='text';field.maxLength=40;field.placeholder='e.g. summit1';field.setAttribute('aria-label','New campaign ref');body.appendChild(field);
+        renderActions(body,[{label:'Add campaign link',primary:true,onClick:function(){
           add.disabled=true;
           adminAction('manageToursRefCreate',{token:token,ref:field.value}).then(function(result){
             if(result.ok)adminTourShare(token);else{status.textContent=result.error;add.disabled=false;}
           }).catch(function(){status.textContent='Could not create the campaign link.';add.disabled=false;});
-        };
+        }}]);
+        const add=body.lastElementChild.querySelector('button');
       }).catch(function(){status.textContent='Sharing is unavailable right now.';});
     },{onBack:function(){adminManageToursDetail(token);}});
   }
