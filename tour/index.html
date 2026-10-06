@@ -11,7 +11,7 @@
     sessionStorage.setItem('liveask_default_tour_entry', '1');
     sessionStorage.setItem('liveask_default_tour_ref', ref);
   } catch (e) {}
-  location.replace('/');
+  location.replace('/?tour-entry=1&ref=' + encodeURIComponent(ref));
 })();
 </script>
 </head>

@@ -1046,7 +1046,7 @@
   }
   function saveSession(){
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sessionId: sessionId, conversationHistory: conversationHistory, tourToken: tourToken, voiceAuthority: voiceAuthority }));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sessionId: sessionId, conversationHistory: conversationHistory, tourToken: tourToken, voiceAuthority: voiceAuthority, tourEntryRef:tourEntryRef, tourMappingRevision:tourMappingRevision }));
     } catch (e) {
       // Storage unavailable or full (private-browsing modes, quota) — the
       // conversation still works fine for this page, it just won't survive
@@ -1068,9 +1068,13 @@
   const urlTourToken = new URLSearchParams(window.location.search).get('tour');
   let defaultTourStarting = false;
   let tourEntryRef = null;
+  let tourMappingRevision = null;
+  const tourEntryQuery = new URLSearchParams(window.location.search);
+  defaultTourStarting = tourEntryQuery.get('tour-entry') === '1';
+  tourEntryRef = tourEntryQuery.get('ref') || null;
   try {
-    defaultTourStarting = window.sessionStorage.getItem('liveask_default_tour_entry') === '1';
-    tourEntryRef = window.sessionStorage.getItem('liveask_default_tour_ref') || null;
+    defaultTourStarting = defaultTourStarting || window.sessionStorage.getItem('liveask_default_tour_entry') === '1';
+    tourEntryRef = tourEntryRef || window.sessionStorage.getItem('liveask_default_tour_ref') || null;
     if (defaultTourStarting) {
       window.sessionStorage.removeItem('liveask_default_tour_entry');
       window.sessionStorage.removeItem('liveask_default_tour_ref');
@@ -1089,6 +1093,10 @@
     conversationHistory = (restoredSession && restoredSession.conversationHistory) || [];
     tourToken = (restoredSession && restoredSession.tourToken) || null;
     voiceAuthority = (restoredSession && restoredSession.voiceAuthority) || null;
+    if (!defaultTourStarting && restoredSession) {
+      tourEntryRef = restoredSession.tourEntryRef || null;
+      tourMappingRevision = restoredSession.tourMappingRevision == null ? null : restoredSession.tourMappingRevision;
+    }
   }
 
   function uniqueConversationId(prefix){
@@ -1462,6 +1470,7 @@
       tourLifecycle: Object.assign({ event: eventName, sessionId: sessionId, tourToken: tourToken }, extra || {})
     }).then(function(data){
       // KV progress can lag the initial greeting at another read location.
+      if (data && data.tourUnavailable) { fallbackUnavailableTour(); return null; }
       // Retry only the read-only projection; never reset or advance a Tour.
       if (eventName === 'TOUR_STATE' && data && data.ok === false && data.error === 'Tour is not active' && retryIndex < stateRetryDelays.length) {
         return new Promise(function(resolve){
@@ -1697,10 +1706,11 @@
     fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sessionId: sessionId, messages: [], tourToken: tourToken, tourRef: tourEntryRef })
+      body: JSON.stringify({ sessionId: sessionId, messages: [], tourToken: tourToken, tourRef: tourEntryRef, tourMappingRevision:tourMappingRevision })
     })
       .then(function(res){ return res.json(); })
       .then(function(data){
+        if (data.tourUnavailable) { fallbackUnavailableTour(); return; }
         rememberVoiceAuthority(data);
         if (data.tourAuthoring === true) setTourAuthoringActive(true);
         else if (data.tourAuthoring === false) setTourAuthoringActive(false);
@@ -1812,11 +1822,15 @@
   }
 
   var autoDemoVoiceStartPending = false;
+  function fallbackUnavailableTour(){
+    try { sessionStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('liveask_default_tour_entry'); sessionStorage.removeItem('liveask_default_tour_ref'); } catch(e) {}
+    window.location.replace('/');
+  }
 
   function startDefaultTour(ref){
     defaultTourStarting = true;
     syncDefaultTourButton();
-    const resolverUrl = new URL('/tour/default', WORKER_URL);
+    const resolverUrl = new URL('/tour/resolve', WORKER_URL);
     if (ref) resolverUrl.searchParams.set('ref', ref);
     return fetch(resolverUrl.toString(), { method: 'GET', headers: { accept: 'application/json' } })
       .then(function(res){
@@ -1831,6 +1845,8 @@
         tourToken = data.tourToken;
         defaultTourStarting = false;
         tourEntryRef = typeof data.ref === 'string' && data.ref ? data.ref : (ref || null);
+        tourMappingRevision = data.mappingRevision == null ? null : data.mappingRevision;
+        if (tourEntryQuery.get('tour-entry') === '1') history.replaceState(null,'',window.location.pathname + window.location.hash);
         sessionId = 'web-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
         conversationHistory = [];
         voiceAuthority = null;
@@ -1841,6 +1857,7 @@
       .catch(function(){
         defaultTourStarting = false;
         syncDefaultTourButton();
+        if (ref || tourEntryQuery.get('tour-entry') === '1') { fallbackUnavailableTour(); return; }
         const a = document.createElement('div');
         a.className = 'ask-msg ai';
         a.innerHTML = '<p></p>';
@@ -3335,6 +3352,7 @@
         // visually separated toward the bottom with the destructive
         // treatment (Section 8's explicit requirement) via danger:true.
         const actionRows = [
+          { label: 'Share this Tour / campaign links', value: 'share' },
           { label: 'Run/Test', value: 'preview' },
           { label: 'Edit', value: 'edit' },
           { label: 'Resend link to RA email', value: 'resend' },
@@ -3346,6 +3364,7 @@
           actionRows.splice(actionRows.length - 1, 0, { label: 'Extend expiry', value: 'extend' });
         }
         renderNavRows(actions, actionRows, function(choice){
+          if (choice === 'share') { adminTourShare(token); return; }
           if (choice === 'preview') adminManageToursPreview(token);
           else if (choice === 'edit') adminManageToursEdit(token);
           else if (choice === 'default') adminManageToursSetDefault(token);
@@ -3389,6 +3408,43 @@
   // header comment in index-worker.js: this NEVER touches the real guest
   // link or a tourprogress: record, so it stays safe to re-run any time,
   // including after lock-in).
+  function adminTourShare(token){
+    renderSecondaryPanel('Share this Tour', function(body){
+      const status = document.createElement('p'); body.appendChild(status);
+      adminAction('manageToursRefsList',{token:token}).then(function(data){
+        if (!data.ok) { status.textContent = data.error; return; }
+        function shareRow(label,url,qrDataUrl,record){
+          const heading = document.createElement('h3'); heading.textContent = label; body.appendChild(heading);
+          const link = document.createElement('p'); link.textContent = url; body.appendChild(link);
+          function button(text,action){ const b=document.createElement('button'); b.type='button'; b.textContent=text; b.onclick=action; body.appendChild(b); }
+          button('Copy',function(){copyManageTourText(url).then(function(){status.textContent='Link copied.';}).catch(function(){status.textContent='Could not copy the link.';});});
+          button('QR',function(){
+            if (!/^data:image\/gif;base64,/.test(qrDataUrl)) return;
+            const image=document.createElement('img'); image.src=qrDataUrl; image.alt='QR code for '+url; image.width=246; body.appendChild(image);
+            const download=document.createElement('a'); download.href=qrDataUrl; download.download='liveask-tour-'+(record ? record.ref:'canonical')+'.gif'; download.textContent='Download QR'; body.appendChild(download);
+          });
+          button('Email link + QR',function(){
+            adminAction('manageToursShareEmail',{token:token,ref:record ? record.ref:null}).then(function(result){status.textContent=result.ok ? 'Your email with matching link and QR has been sent.':result.error;});
+          });
+          if(record && record.status==='active') button('Disable',function(){
+            if (!window.confirm('Disable this campaign link? The Tour and other links remain unchanged.')) return;
+            adminAction('manageToursRefDisable',{token:token,ref:record.ref,revision:record.revision}).then(function(result){if(result.ok)adminTourShare(token);else status.textContent=result.error;});
+          });
+        }
+        shareRow('Canonical Tour link',data.url,data.qrDataUrl,null);
+        data.refs.forEach(function(record){shareRow(record.ref+(record.status==='disabled' ? ' — disabled':''),record.url,record.qrDataUrl,record);});
+        const field=document.createElement('input'); field.type='text';field.maxLength=40;field.placeholder='e.g. summit1';field.setAttribute('aria-label','New campaign ref');body.appendChild(field);
+        const add=document.createElement('button');add.type='button';add.textContent='Add campaign link';body.appendChild(add);
+        add.onclick=function(){
+          add.disabled=true;
+          adminAction('manageToursRefCreate',{token:token,ref:field.value}).then(function(result){
+            if(result.ok)adminTourShare(token);else{status.textContent=result.error;add.disabled=false;}
+          }).catch(function(){status.textContent='Could not create the campaign link.';add.disabled=false;});
+        };
+      }).catch(function(){status.textContent='Sharing is unavailable right now.';});
+    },{onBack:function(){adminManageToursDetail(token);}});
+  }
+
   function adminManageToursPreview(token){
     renderSecondaryPanel('Run/Test', function(body){
       body.textContent = 'Loading…';
