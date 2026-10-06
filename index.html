@@ -1443,22 +1443,17 @@
 
   .pricing-section {
     background: var(--paper);
-    padding: 56px 0 64px;
+    padding: 56px 0 60px;
     border-top: 1px solid var(--hairline);
   }
 
   .pricing-section .starters-heading {
     text-align: left;
+    margin-bottom: 18px;
   }
 
-  .founding-offers-heading {
-    margin: 34px 0 18px;
-    font-size: 25px;
-    line-height: 1.2;
-    font-weight: 800;
-    color: var(--ink);
-  }
-
+  /* Preserve the accepted live offer cards and intent wiring. Prices are
+     deliberately omitted; both offer headings share the same prominence. */
   .founding-business-card {
     max-width: 860px;
     border: 2px solid var(--liveask-blue);
@@ -1466,57 +1461,34 @@
     padding: 28px 30px;
     box-shadow: 0 8px 24px rgba(0,95,175,0.08);
   }
-
-  .founding-business-eyebrow {
-    margin: 0 0 8px;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--liveask-blue);
-  }
-
-  .founding-business-row,
-  .founding-partner-row {
+  .founding-business-row, .founding-partner-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 28px;
   }
-
-  .founding-business-copy,
-  .founding-partner-copy {
-    min-width: 0;
-  }
-
-  .founding-business-title {
+  .founding-business-copy, .founding-partner-copy { min-width: 0; }
+  .founding-business-title, .founding-partner-title {
     margin: 0;
-    font-size: 28px;
-    line-height: 1.22;
-    font-weight: 800;
+    font-size: 18px;
+    line-height: 1.35;
+    font-weight: 750;
     color: var(--ink);
   }
-
-  .founding-business-title .price {
-    color: var(--liveask-blue);
+  .founding-business-title { color: var(--liveask-blue); }
+  .founding-business-subtitle {
+    margin: 8px 0 0;
+    font-size: 15px;
+    line-height: 1.35;
+    font-weight: 700;
   }
-
-  .founding-business-desc {
-    margin: 10px 0 0;
+  .founding-business-desc, .founding-partner-desc {
+    margin: 5px 0 0;
     max-width: 650px;
-    font-size: 16px;
-    line-height: 1.55;
+    font-size: 13.5px;
+    line-height: 1.5;
     color: var(--liveask-charcoal);
   }
-
-  .founding-business-anchor {
-    margin: 8px 0 0;
-    font-size: 14px;
-    line-height: 1.5;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
   .founding-cta {
     flex-shrink: 0;
     display: inline-flex;
@@ -1533,11 +1505,7 @@
     cursor: pointer;
     transition: background 0.15s ease;
   }
-
-  .founding-cta:hover {
-    background: #004E93;
-  }
-
+  .founding-cta:hover { background: #004E93; }
   .founding-partner-card {
     max-width: 860px;
     margin-top: 16px;
@@ -1546,68 +1514,23 @@
     border: 1px solid var(--hairline);
     border-radius: 16px;
   }
-
-  .founding-partner-title {
-    margin: 0;
-    font-size: 18px;
-    line-height: 1.35;
-    font-weight: 750;
-    color: var(--ink);
-  }
-
-  .founding-partner-desc {
-    margin: 5px 0 0;
-    max-width: 650px;
-    font-size: 13.5px;
-    line-height: 1.5;
-    color: var(--liveask-charcoal);
-  }
-
-  .founding-partner-card .founding-cta {
-    padding: 9px 17px;
-    font-size: 12px;
-  }
-
-  .standard-pricing {
+  .founding-partner-card .founding-cta { padding: 9px 17px; font-size: 12px; }
+  .founding-service-note {
     max-width: 860px;
-    margin-top: 44px;
-    padding-top: 22px;
+    margin-top: 32px;
+    padding-top: 18px;
     border-top: 1px solid var(--hairline);
-  }
-
-  .standard-pricing h3 {
-    margin: 0 0 8px;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
-  .standard-pricing p {
-    margin: 2px 0;
+    color: var(--liveask-charcoal);
     font-size: 14px;
     line-height: 1.55;
-    color: var(--liveask-charcoal);
   }
-
-  .standard-pricing strong {
-    color: var(--ink);
-  }
-
+  .founding-service-note p { margin: 6px 0; }
   @media (max-width: 720px) {
-    .pricing-section { padding: 42px 0 48px; }
-    .founding-offers-heading { font-size: 22px; margin-top: 26px; }
+    .pricing-section .starters-heading { margin-bottom: 28px; }
     .founding-business-card { padding: 22px 20px; }
-    .founding-business-row,
-    .founding-partner-row {
-      align-items: flex-start;
-      flex-direction: column;
-      gap: 18px;
-    }
-    .founding-business-title { font-size: 24px; }
-    .founding-business-desc { font-size: 14.5px; }
+    .founding-business-row, .founding-partner-row { align-items: flex-start; flex-direction: column; gap: 18px; }
     .founding-cta { width: 100%; }
     .founding-partner-card { padding: 20px; }
-    .standard-pricing { margin-top: 34px; }
   }
 
   /* ---------- CTA Wizard callout ---------- */
@@ -2899,17 +2822,14 @@
 
 <section class="pricing-section" id="liveask-pricing">
   <div class="wrap">
-    <h2 class="starters-heading">Pricing</h2>
-
-    <h3 class="founding-offers-heading">Founding Offers</h3>
+    <h2 class="starters-heading">Founding Offers</h2>
 
     <div class="founding-business-card">
-      <p class="founding-business-eyebrow">Founding Business</p>
       <div class="founding-business-row">
         <div class="founding-business-copy">
-          <p class="founding-business-title">Deployment at <span class="price">A$600</span></p>
-          <p class="founding-business-desc">A limited introductory opportunity for businesses joining LiveAsk during its Founding rollout.</p>
-          <p class="founding-business-anchor">Standard LiveAsk deployment from A$2,000.</p>
+          <p class="founding-business-title">Founding Business</p>
+          <p class="founding-business-subtitle">Limited introductory deployment offer</p>
+          <p class="founding-business-desc">For businesses joining LiveAsk during its initial rollout.</p>
         </div>
         <button type="button" class="founding-cta" data-nav-intent="my-business">Get details on Founding offer</button>
       </div>
@@ -2925,10 +2845,9 @@
       </div>
     </div>
 
-    <div class="standard-pricing">
-      <h3>Standard Pricing</h3>
-      <p>LiveAsk deployment from <strong>A$2,000</strong></p>
-      <p>Managed service from <strong>A$199/mth</strong></p>
+    <div class="founding-service-note">
+      <p>LiveAsk deployments are scoped to the business, implementation and level of customisation required.</p>
+      <p>A monthly managed service applies once LiveAsk is live, including support, text conversations, SMS verification and Voice usage.</p>
     </div>
   </div>
 </section>
