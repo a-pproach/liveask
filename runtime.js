@@ -145,7 +145,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20261006-tour-share-layout';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20261008-mobile-tour-entry';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -931,6 +931,11 @@
   // disappears in a single abrupt frame that could read as a jump.
   function completeIdentity(identityEl){
     if (!identityEl) return;
+    // Founder-accepted mobile entry: retain the SVG/smile only at the choice gate.
+    if (askPanel.classList.contains('ask-tour-entry') && window.matchMedia('(max-width: 720px)').matches) {
+      identityEl.dataset.tourEntryIdentity = '1';
+      return;
+    }
     setTimeout(function(){
       identityEl.classList.add('ask-identity--fading');
       setTimeout(function(){
@@ -1662,6 +1667,18 @@
   }
 
   function setTourEntryChoiceMode(active){
+    // HOME presentation only; existing choice handlers own scroll unlock/start.
+    const homeEntry = !!active && cfg.tenantId === 'liveask_au';
+    askPanel.classList.toggle('ask-tour-entry', homeEntry);
+    if (cfg.tenantId === 'liveask_au') {
+      document.body.classList.toggle('liveask-tour-entry', homeEntry);
+      if (!homeEntry) {
+        thread.querySelectorAll('[data-tour-entry-identity="1"]').forEach(function(el){ el.remove(); });
+        const menu = document.querySelector('.tour-entry-menu');
+        if (menu) menu.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('liveask-tour-entry-menu-open');
+      }
+    }
     input.disabled = !!active;
     micBtn.style.display = active ? 'none' : '';
     sendBtn.style.display = active ? 'none' : '';
@@ -1698,7 +1715,11 @@
     setFinalPlaceholder();
     ph.classList.remove('fade');
     setTourEntryChoiceMode(true);
-    askPanel.scrollIntoView({ behavior: 'auto', block: 'start' });
+    if (cfg.tenantId === 'liveask_au' && window.matchMedia('(max-width: 720px)').matches) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } else {
+      askPanel.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
     lockTourEntryScroll();
 
     const thinking = beginIdentity();
@@ -1731,7 +1752,9 @@
         if (showPrivacyNotice) {
           a.insertBefore(buildPrivacyNoticeEl(), replyP);
         }
-        replyP.textContent = replyText;
+        replyP.textContent = cfg.tenantId === 'liveask_au' && window.matchMedia('(max-width: 720px)').matches
+          ? replyText.replace(/\s+and we['’]ll start your tour\.?\s*$/i, '.')
+          : replyText;
         // Real gap found 25 August 2026: this greeting path never rendered
         // data.quickReplies at all (only submitToPanel's success handler
         // did) — so the Worker's new fixed "Start tour" button silently had
@@ -2163,6 +2186,27 @@
       btn.className = 'ask-quickreply-btn';
       if (TOUR_ENTRY_LABELS[choice]) {
         btn.textContent = TOUR_ENTRY_LABELS[choice];
+        if (askPanel.classList.contains('ask-tour-entry')) {
+          btn.classList.add('ask-tour-entry-choice');
+          const label = document.createElement('span');
+          label.className = 'ask-tour-entry-label';
+          label.textContent = choice;
+          const shortLabel = document.createElement('span');
+          shortLabel.className = 'ask-tour-entry-short';
+          shortLabel.textContent = TOUR_ENTRY_LABELS[choice];
+          btn.textContent = '';
+          if (choice !== 'Browse site instead') {
+            const icon = document.createElement('span');
+            icon.className = 'ask-tour-entry-icon';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.innerHTML = choice === 'Take Tour with Voice'
+              ? '<svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg>'
+              : '<svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-6 4V5a2 2 0 0 1 2-2Z"/><path d="M7 9h10M7 13h6"/></svg>';
+            btn.appendChild(icon);
+          }
+          btn.appendChild(label);
+          btn.appendChild(shortLabel);
+        }
         if (choice === 'Take Tour with Voice') {
           btn.style.background = '#0A8442';
           btn.style.borderColor = '#0A8442';

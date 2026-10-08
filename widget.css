@@ -682,6 +682,25 @@
 /* Default (desktop/tablet): full label always shown, short label never
    shown — the mobile media query below overrides both. */
 .ask-quickreply-short { display: none; }
+.ask-tour-entry-label,.ask-tour-entry-icon { display:none; }
+/* 8 October 2026: entry-only mobile presentation. Never compact the locked
+   input-row/textarea/logo geometry; selection removes ask-tour-entry. */
+@media (max-width:720px) {
+  .ask-panel.ask-tour-entry .ask-thread { padding:12px 14px;max-height:none;overflow:visible; }
+  .ask-panel.ask-tour-entry .ask-msg:last-child { margin-bottom:0; }
+  .ask-panel.ask-tour-entry .ask-footer,
+  .ask-panel.ask-tour-entry .ask-scroll-latest { display:none; }
+  .ask-panel.ask-tour-entry .ask-identity-emoji { animation:none;opacity:1; }
+  .ask-panel.ask-tour-entry .ask-row2 { grid-template-columns:1fr;gap:6px; }
+  .ask-panel.ask-tour-entry .ask-row2-left { grid-row:1;flex-direction:column;align-items:stretch;gap:9px; }
+  .ask-panel.ask-tour-entry .ask-row2-plus { grid-row:2; }
+  .ask-panel.ask-tour-entry .ask-row2-right { display:none; }
+  .ask-panel.ask-tour-entry .ask-row2 .ask-row2-left .ask-quickreply-btn { display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:54px;padding:12px 10px;font-size:20px;font-weight:700;line-height:1.2;white-space:normal; }
+  .ask-panel.ask-tour-entry .ask-tour-entry-short { display:none; }
+  .ask-panel.ask-tour-entry .ask-tour-entry-label,
+  .ask-panel.ask-tour-entry .ask-tour-entry-icon { display:inline-flex; }
+  .ask-tour-entry-icon svg { width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
+}
 .ask-quickreply-long { display: inline; }
 
 @media (max-width: 480px) {

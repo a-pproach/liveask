@@ -1848,6 +1848,19 @@
   }
 
 </style>
+<style>
+/* HOME mobile Tour choice gate only. Normal navigation returns on selection. */
+.tour-entry-menu { display:none; }
+@media(max-width:720px) {
+  body.liveask-tour-entry .site-header .wrap { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap; }
+  body.liveask-tour-entry .logo-lockup { margin-bottom:0; }
+  body.liveask-tour-entry .logo-lockup img { height:48px; }
+  body.liveask-tour-entry .tour-entry-menu { display:block;min-width:44px;min-height:44px;background:none;border:0;color:var(--ink);font-size:27px; }
+  body.liveask-tour-entry .primary-nav { display:none; }
+  body.liveask-tour-entry.liveask-tour-entry-menu-open .primary-nav { display:flex;flex-basis:100%;flex-wrap:wrap;gap:12px;margin-top:12px;overflow:visible; }
+  body.liveask-tour-entry .primary-nav a { font-size:13px; }
+}
+</style>
 </head>
 <body id="top">
 
@@ -1859,6 +1872,7 @@
     </a>
 
     <nav class="primary-nav" aria-label="Primary">
+      <!-- Existing navigation links and intent handlers remain authoritative. -->
       <a href="#liveask-overview">What is LiveAsk?</a>
       <a href="#liveask-primary-mount" data-nav-intent="my-business">My Business</a>
       <a href="#liveask-primary-mount" data-nav-intent="liveask-partners"><span data-desktop>LiveAsk Partners</span><span data-mobile>Partners</span></a>
@@ -1867,6 +1881,21 @@
 
   </div>
 </header>
+<script>
+(function(){
+  const header=document.querySelector('.site-header .wrap');
+  const nav=header.querySelector('.primary-nav');
+  nav.id='liveask-primary-navigation';
+  const menu=document.createElement('button');
+  menu.type='button';menu.className='tour-entry-menu';menu.textContent='☰';
+  menu.setAttribute('aria-label','Open menu');menu.setAttribute('aria-controls',nav.id);menu.setAttribute('aria-expanded','false');
+  header.insertBefore(menu,nav);
+  menu.addEventListener('click',function(){
+    const open=document.body.classList.toggle('liveask-tour-entry-menu-open');
+    menu.setAttribute('aria-expanded',String(open));
+  });
+})();
+</script>
 
 <main>
   <div class="wrap">
@@ -2948,7 +2977,7 @@
 })();
 </script>
 
-<script src="widget.js?v=20260916-tour-text-handoff-1"
+<script src="widget.js?v=20261008-mobile-tour-entry"
         data-liveask-site="liveask_au"
         data-worker-url="https://ask-liveask.chriscarroll-promptworkx.workers.dev"
         data-company-name="LiveAsk"
