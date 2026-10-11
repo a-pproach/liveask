@@ -1342,7 +1342,7 @@
   // the "just landed after a cross-page hop" resume path (see near the
   // bottom of this file) can call the identical, already-tested logic.
   function scrollAndHighlight(selector){
-    const el = host.$(selector);
+    const el = typeof selector === 'string' ? host.$(selector) : selector;
     if (!el) return;
     // Real live-test find (24 August 2026): the ask panel is pinned
     // (position: sticky) at the top of the viewport at all times — a plain
@@ -2527,6 +2527,8 @@
           voicePromptEnabled = true;
           renderVoicePromptControl();
         }
+        // Ordinary Text reply only; Tour retry and Voice render paths stay separate.
+        if (data.navigation) SITE_NAV_API.handleResponse(data);
         // Real fix, 7 August 2026: the async reply lands well after the
         // earlier submit-time refocus, and appending it here is a real DOM
         // mutation that can reset the caret blink a second time — same
@@ -3020,7 +3022,9 @@
   function runQuickMenuItem(item){
     closePlusMenu();
     if (item.type === 'page') {
-      window.location.href = item.target;
+      const target = safeQuickMenuPageTarget(item.target, window.location.origin);
+      if (!target) return;
+      window.location.href = target;
     } else if (item.type === 'chat') {
       panel.byId('ask-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
       submitToPanel(item.prompt, { showVisitorBubble: false, systemNote: item.title });
@@ -3209,11 +3213,13 @@
       renderNavRows(body, [
         { label: 'Create Tour', value: 'create' },
         { label: 'Manage Tours', value: 'manage' },
-        { label: 'Manage Quick Menu', value: 'quickmenu' }
+        { label: 'Manage Quick Menu', value: 'quickmenu' },
+        { label: 'Site Map', value: 'sitemap' }
       ], function(choice){
         if (choice === 'create') adminCreateTour();
         else if (choice === 'manage') adminManageToursList();
         else if (choice === 'quickmenu') adminQuickMenuList();
+        else if (choice === 'sitemap') SITE_NAV_API.adminList();
       });
     }, { onBack: closePlusMenu });
   }
@@ -4762,6 +4768,493 @@
       });
     } catch (e) {}
   });
+
+// Same-origin Quick Menu page targets only; other action types are untouched.
+function safeQuickMenuPageTarget(value, origin) {
+  if (typeof value !== 'string' || typeof origin !== 'string') return null;
+  const raw=value.trim();
+  if (!raw || raw.length>2048 || /[\u0000-\u0020\u007f\\]/.test(raw) || raw.startsWith('//')) return null;
+  try {
+    const decoded=decodeURIComponent(raw);
+    if (/[\u0000-\u0020\u007f\\]/.test(decoded) || decoded.startsWith('//')) return null;
+    const base=new URL(origin); const url=new URL(raw,base.origin+'/');
+    if (!['https:','http:'].includes(url.protocol) || url.origin!==base.origin || url.username || url.password) return null;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^https?:\/\//i.test(raw)) return null;
+    return raw;
+  } catch { return null; }
+}
+
+
+  // >>> LIVEASK SITE NAV (POC) BEGIN — Site Map + Governed Contextual Navigation
+  // ---------------------------------------------------------------------
+  // Governing principle: the model REQUESTS a semantic destination (the Worker
+  // sends `navigation: {destination, label, mode}`); deterministic code here
+  // decides whether it can be performed and performs it. The model never
+  // supplies a URL or selector, and this block never accepts one from the
+  // network: destinations come only from GET /site-map (approved + healthy
+  // records), are re-validated here, and are resolved against the live DOM
+  // through a fixed, structured locator hierarchy (id -> data-liveask-target
+  // marker -> unique heading). Ambiguous, missing, changed or hidden targets
+  // FAIL CLOSED (no movement + one plain notice) — never a guess, never nth-child.
+  //
+  // Tour is untouched: while a Tour is active this block ignores navigation
+  // entirely, and Tour GO_TO keeps using handleTourAction/scrollAndHighlight.
+  // Mapping Mode (operator-only) lives in the existing RA Admin menu and is
+  // reachable only after the existing Admin PIN session.
+  const SITE_NAV_API = (function(){
+    const PENDING_KEY = 'liveask_pending_nav_v1';
+    const PENDING_TTL_MS = 60 * 1000;
+    const ID_RE = /^[A-Z][A-Z0-9_]{2,63}$/;
+    const HTML_ID_RE = /^[A-Za-z][A-Za-z0-9_:.\-]{0,127}$/;
+    const MARKER_RE = /^[a-z0-9][a-z0-9_\-]{0,63}$/;
+    const PAGE_RE = /^\/[A-Za-z0-9._~\-\/%]{0,199}$/;
+    const RETRY_DELAYS_MS = [0, 400, 1000, 2000];
+    const registry = { mode: 'off', revision: 0, destinations: {} };
+    let readyResolve;
+    const ready = new Promise(function(resolve){ readyResolve = resolve; });
+
+    // ---------- small helpers ----------
+    function norm(text){ return String(text == null ? '' : text).normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function normalizePath(p){
+      if (typeof p !== 'string' || p.charAt(0) !== '/' || p.charAt(1) === '/') return null;
+      if (/[?#\\:]/.test(p) || p.indexOf('..') !== -1) return null;
+      if (p === '/index.html') p = '/';
+      if (p.length > 1) p = p.replace(/\/+$/, '');
+      return PAGE_RE.test(p) ? p : null;
+    }
+    function currentPath(){
+      const p = normalizePath(window.location.pathname);
+      return p === null ? window.location.pathname : p;
+    }
+    function cssEscape(value){
+      return (window.CSS && window.CSS.escape) ? window.CSS.escape(value) : String(value).replace(/[^A-Za-z0-9_\-]/g, '\\$&');
+    }
+    function headingOf(el){
+      if (!el) return null;
+      if (/^H[1-6]$/.test(el.tagName)) return el;
+      return el.querySelector('h1,h2,h3,h4,h5,h6');
+    }
+    function sectionOf(heading){
+      const container = heading.closest('section, article, [role="region"]');
+      if (!container || container === heading) return heading;
+      const level = heading.tagName.charAt(1);
+      // A wrapper holding several headings of this level is not "this" section.
+      return container.querySelectorAll('h' + level).length > 1 ? heading : container;
+    }
+    function isRendered(el){
+      if (!el || !el.isConnected) return false;
+      if (el.closest('[hidden], [aria-hidden="true"]')) return false;
+      // Content inside a CLOSED <details> is not rendered (its <summary> is); the <details> element itself is.
+      const closedDetails = el.parentElement ? el.parentElement.closest('details:not([open])') : null;
+      if (closedDetails && !(el.tagName === 'SUMMARY' && el.parentElement === closedDetails)) return false;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      return el.getClientRects().length > 0;
+    }
+
+    // ---------- registry (from the Worker's public projection) ----------
+    function sanitizeLocator(loc){
+      if (!loc || typeof loc !== 'object') return null;
+      const out = {};
+      if (typeof loc.id === 'string' && HTML_ID_RE.test(loc.id)) out.id = loc.id;
+      if (typeof loc.marker === 'string' && MARKER_RE.test(loc.marker)) out.marker = loc.marker;
+      if (loc.heading && typeof loc.heading.text === 'string' && loc.heading.text.length <= 160 &&
+          Number.isInteger(loc.heading.level) && loc.heading.level >= 1 && loc.heading.level <= 6) {
+        out.heading = { text: loc.heading.text, level: loc.heading.level };
+      }
+      return (out.id || out.marker || out.heading) ? out : null;
+    }
+    function loadRegistry(data){
+      registry.mode = 'off'; registry.destinations = {};
+      if (!data || typeof data !== 'object') return;
+      if (data.mode === 'offer' || data.mode === 'go') registry.mode = data.mode;
+      registry.revision = Number.isInteger(data.revision) ? data.revision : 0;
+      const src = data.destinations && typeof data.destinations === 'object' ? data.destinations : {};
+      Object.keys(src).slice(0, 64).forEach(function(id){
+        const d = src[id];
+        if (!ID_RE.test(id) || !d || typeof d.label !== 'string' || !d.label || d.label.length > 30) return;
+        const page = normalizePath(d.page_path);
+        const locator = sanitizeLocator(d.locator);
+        if (!page || !locator) return;
+        registry.destinations[id] = { id: id, label: d.label, page: page, locator: locator, expectHeading: typeof d.expect_heading === 'string' ? d.expect_heading : '' };
+      });
+    }
+    function fetchRegistry(){
+      return fetch(WORKER_URL + '/site-map', { cache: 'no-store' })
+        .then(function(res){ return res.ok ? res.json() : null; })
+        .then(loadRegistry)
+        .catch(function(){ registry.mode = 'off'; registry.destinations = {}; })
+        .then(function(){ readyResolve(); });
+    }
+
+    // ---------- locator resolution (fail closed) ----------
+    // Returns {ok:true, el, via} or {ok:false, reason}. Reasons: missing | ambiguous | conflict | changed | hidden.
+    function resolveTarget(dest){
+      const loc = dest.locator || {};
+      const hits = [];
+      if (loc.id) {
+        const byId = document.querySelectorAll('[id="' + cssEscape(loc.id) + '"]'); // duplicates are invalid HTML: treat as ambiguous, never pick the first
+        if (byId.length > 1) return { ok: false, reason: 'ambiguous' };
+        if (byId.length === 1) hits.push({ via: 'id', el: byId[0] });
+      }
+      if (loc.marker) {
+        const marked = document.querySelectorAll('[data-liveask-target="' + cssEscape(loc.marker) + '"]');
+        if (marked.length > 1) return { ok: false, reason: 'ambiguous' };
+        if (marked.length === 1) hits.push({ via: 'marker', el: marked[0] });
+      }
+      if (loc.heading) {
+        const wanted = norm(loc.heading.text);
+        const matches = Array.prototype.filter.call(document.querySelectorAll('h' + loc.heading.level), function(h){ return norm(h.textContent) === wanted; });
+        if (matches.length > 1) return { ok: false, reason: 'ambiguous' };
+        if (matches.length === 1) hits.push({ via: 'heading', el: sectionOf(matches[0]) });
+      }
+      if (!hits.length) return { ok: false, reason: 'missing' };
+      const primary = hits[0].el;
+      for (let i = 1; i < hits.length; i++) {
+        const other = hits[i].el;
+        if (!(primary === other || primary.contains(other) || other.contains(primary))) return { ok: false, reason: 'conflict' };
+      }
+      if (dest.expectHeading) {
+        const h = headingOf(primary);
+        if (!h || norm(h.textContent) !== norm(dest.expectHeading)) return { ok: false, reason: 'changed' };
+      }
+      if (!isRendered(primary)) return { ok: false, reason: 'hidden' };
+      return { ok: true, el: primary, via: hits[0].via };
+    }
+
+    function resolveWithRetry(dest, onDone){
+      let attempt = 0;
+      (function tryOnce(){
+        const result = resolveTarget(dest);
+        // Late-rendered content (images/fonts/JS) is the only reason to retry; ambiguity/changes are final.
+        if (result.ok || (result.reason !== 'missing' && result.reason !== 'hidden') || attempt >= RETRY_DELAYS_MS.length - 1) { onDone(result); return; }
+        attempt += 1;
+        setTimeout(tryOnce, RETRY_DELAYS_MS[attempt]);
+      })();
+    }
+
+    // ---------- UI notices ----------
+    function openThread(){
+      thread.classList.add('active');
+      askPanel.querySelector('.ask-box').classList.add('expanded');
+    }
+    function announce(text){
+      openThread();
+      const a = document.createElement('div');
+      a.className = 'ask-msg ai';
+      a.innerHTML = '<p></p>';
+      a.querySelector('p').textContent = text;
+      thread.appendChild(a);
+      maybeScrollToBottom();
+    }
+    function announceFailure(dest, reason){
+      try { console.warn('LiveAsk navigation fail-closed:', dest && dest.id, reason); } catch (e) {}
+      announce("I couldn't find " + (dest ? dest.label : 'that part of the page') + " on this page just now, so I haven't moved you.");
+    }
+
+    // ---------- performing a navigation ----------
+    function savePending(id){
+      try { sessionStorage.setItem(PENDING_KEY, JSON.stringify({ id: id, at: Date.now() })); } catch (e) {}
+    }
+    function takePending(){
+      try {
+        const raw = sessionStorage.getItem(PENDING_KEY);
+        if (!raw) return null;
+        sessionStorage.removeItem(PENDING_KEY);
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed.id !== 'string' || typeof parsed.at !== 'number') return null;
+        if (Date.now() - parsed.at > PENDING_TTL_MS || parsed.at > Date.now() + 5000) return null;
+        return parsed;
+      } catch (e) { return null; }
+    }
+    function go(id){
+      if (!navigationAllowedNow() || registry.mode === 'off') return false;
+      const dest = registry.destinations[id];
+      if (!dest) return false;
+      if (dest.page === currentPath()) {
+        resolveWithRetry(dest, function(result){
+          if (!navigationAllowedNow() || registry.mode === 'off') return;
+          if (!result.ok) { announceFailure(dest, result.reason); return; }
+          scrollAndHighlight(result.el);
+        });
+        return true;
+      }
+      // Cross-page: remember only the semantic id (never a selector); the landing page re-resolves it from its own registry.
+      let url;
+      try { url = new URL(dest.page, window.location.origin); } catch (e) { return false; }
+      if (url.origin !== window.location.origin) return false;
+      savePending(id);
+      saveSession();
+      window.location.assign(url.href);
+      return true;
+    }
+    function resumeAfterLoad(){
+      const pending = takePending();
+      if (!pending) return;
+      ready.then(function(){
+        const dest = registry.destinations[pending.id];
+        if (!navigationAllowedNow() || !dest || registry.mode === 'off' || dest.page !== currentPath()) return;
+        revealPanel();
+        resolveWithRetry(dest, function(result){
+          if (!navigationAllowedNow() || registry.mode === 'off') return;
+          if (!result.ok) { announceFailure(dest, result.reason); return; }
+          scrollAndHighlight(result.el);
+        });
+      });
+    }
+
+    function navigationAllowedNow(){
+      return !tourToken && tourPlaybackState === 'IDLE' && !voiceSessionIsOpen();
+    }
+
+    function renderOffer(dest){
+      Array.prototype.forEach.call(row2Left.querySelectorAll('.ask-nav-btn'), function(b){ b.remove(); });
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ask-quickreply-btn ask-nav-btn';
+      btn.textContent = 'Show me ' + dest.label;
+      btn.addEventListener('click', function(){
+        if (!navigationAllowedNow() || registry.mode === 'off') { btn.remove(); return; }
+        btn.disabled = true;
+        openThread();
+        thread.appendChild(createActionReceiptEl('Show me ' + dest.label));
+        maybeScrollToBottom();
+        go(dest.id);
+        btn.remove();
+      });
+      row2Left.appendChild(btn);
+    }
+
+    /** Called from the ordinary text-reply success path with the Worker's response. */
+    function handleResponse(data){
+      if (!data || !data.navigation || typeof data.navigation !== 'object') return;
+      if (!navigationAllowedNow()) return;
+      const nav = data.navigation;
+      const id = typeof nav.destination === 'string' ? nav.destination : '';
+      if (!ID_RE.test(id) || (nav.mode !== 'go' && nav.mode !== 'offer')) return;
+      ready.then(function(){
+        const dest = registry.destinations[id];
+        if (!navigationAllowedNow() || !dest || registry.mode === 'off') return; // re-check after asynchronous registry load
+        if (nav.mode === 'go' && registry.mode === 'go') {
+          setTimeout(function(){ if (navigationAllowedNow()) go(id); }, 350); // let the reply text land first
+          return;
+        }
+        // offer (or go downgraded by tenant mode): never offer a same-page target we already know we cannot resolve
+        if (dest.page === currentPath() && !resolveTarget(dest).ok) {
+          try { console.warn('LiveAsk navigation offer withheld (fail-closed):', id); } catch (e) {}
+          return;
+        }
+        renderOffer(dest);
+      });
+    }
+
+    // ---------- Mapping Mode (operator-only; reached via Admin PIN session) ----------
+    const MAPPABLE_TAGS = { SECTION: 1, ARTICLE: 1, MAIN: 1, ASIDE: 1, NAV: 1, HEADER: 1, FOOTER: 1, FORM: 1 };
+    function findMappable(start){
+      let el = start && start.nodeType === 1 ? start : null;
+      while (el && el !== document.body && el !== document.documentElement) {
+        if (MAPPABLE_TAGS[el.tagName] || el.id || el.getAttribute('role') === 'region' || el.hasAttribute('data-liveask-target')) return el;
+        el = el.parentElement;
+      }
+      return null;
+    }
+    /** Builds the strongest structured locator for an element, then PROVES it resolves back to that element. */
+    function captureLocator(el){
+      if (!el) return { ok: false, error: 'Click inside a page section.' };
+      const locator = {};
+      if (el.id && HTML_ID_RE.test(el.id) && document.querySelectorAll('[id="' + cssEscape(el.id) + '"]').length === 1) locator.id = el.id;
+      const marker = el.getAttribute('data-liveask-target');
+      if (marker && MARKER_RE.test(marker)) locator.marker = marker;
+      const h = headingOf(el);
+      let expectHeading = '';
+      if (h) {
+        const text = h.textContent.replace(/\s+/g, ' ').trim();
+        const level = Number(h.tagName.charAt(1));
+        const same = Array.prototype.filter.call(document.querySelectorAll('h' + level), function(x){ return norm(x.textContent) === norm(text); });
+        if (text && text.length <= 160 && same.length === 1) locator.heading = { text: text, level: level };
+        if (text && text.length <= 160) expectHeading = text;
+      }
+      if (!locator.id && !locator.marker && !locator.heading) {
+        return { ok: false, error: 'This section has no stable anchor (no id, no data-liveask-target and no unique heading). Ask the site builder to add an id or data-liveask-target to it.' };
+      }
+      const probe = { id: 'PROBE', label: 'probe', page: currentPath(), locator: locator, expectHeading: expectHeading };
+      const proof = resolveTarget(probe);
+      if (!proof.ok) return { ok: false, error: 'That section could not be resolved reliably (' + proof.reason + ').' };
+      if (!(proof.el === el || proof.el.contains(el) || el.contains(proof.el))) return { ok: false, error: 'The anchor found does not match the section you clicked.' };
+      return { ok: true, locator: locator, expectHeading: expectHeading, page: currentPath(), suggestedLabel: h ? h.textContent.replace(/\s+/g, ' ').trim().slice(0, 30) : '' };
+    }
+    function describeLocator(c){
+      const parts = [];
+      if (c.locator.id) parts.push('#' + c.locator.id);
+      if (c.locator.marker) parts.push('data-liveask-target="' + c.locator.marker + '"');
+      if (c.locator.heading) parts.push('heading "' + c.locator.heading.text + '" (h' + c.locator.heading.level + ', unique)');
+      return parts.join(' · ');
+    }
+    function suggestId(label){
+      let id = String(label || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      if (!id) return '';
+      if (!/^[A-Z]/.test(id)) id = 'PAGE_' + id;
+      id = id.slice(0, 64);
+      return ID_RE.test(id) ? id : '';
+    }
+
+    let picker = null;
+    function stopPicker(){
+      if (!picker) return;
+      document.removeEventListener('mousemove', picker.onMove, true);
+      document.removeEventListener('click', picker.onClick, true);
+      document.removeEventListener('keydown', picker.onKey, true);
+      picker.box.remove(); picker.banner.remove();
+      picker = null;
+    }
+    function insideLiveAsk(event){
+      const path = event.composedPath ? event.composedPath() : [];
+      return path.indexOf(mountEl) !== -1;
+    }
+    function startPicker(onPicked){
+      stopPicker();
+      const box = document.createElement('div');
+      box.style.cssText = 'position:fixed;pointer-events:none;border:2px dashed #1e6fd9;background:rgba(30,111,217,.08);z-index:2147483646;display:none;';
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147483647;background:#0a2540;color:#fff;font:600 13px/1.4 sans-serif;padding:9px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);';
+      banner.textContent = 'Mapping Mode — click a section of this page to map it · Esc to cancel';
+      shadowRoot.appendChild(box); shadowRoot.appendChild(banner);
+      picker = {
+        box: box, banner: banner,
+        onMove: function(e){
+          if (insideLiveAsk(e)) { box.style.display = 'none'; return; }
+          const el = findMappable(e.target);
+          if (!el) { box.style.display = 'none'; return; }
+          const r = el.getBoundingClientRect();
+          box.style.cssText += 'display:block;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;';
+        },
+        onClick: function(e){
+          if (insideLiveAsk(e)) return;
+          e.preventDefault(); e.stopPropagation();
+          const el = findMappable(e.target);
+          stopPicker();
+          onPicked(captureLocator(el));
+        },
+        onKey: function(e){ if (e.key === 'Escape') { stopPicker(); onPicked(null); } }
+      };
+      document.addEventListener('mousemove', picker.onMove, true);
+      document.addEventListener('click', picker.onClick, true);
+      document.addEventListener('keydown', picker.onKey, true);
+    }
+
+    function adminList(){
+      renderSecondaryPanel('Site Map', function(body){
+        body.textContent = 'Loading…';
+        adminAction('siteMapList').then(function(data){
+          body.innerHTML = '';
+          if (!data.ok) { renderPopoverError(body, data.error); return; }
+          const note = document.createElement('div');
+          note.className = 'ask-popover-note';
+          note.textContent = 'Navigation mode: ' + data.mode + (data.mode === 'off' ? ' (visitors are not offered navigation until the tenant switches it on)' : '');
+          body.appendChild(note);
+          data.destinations.forEach(function(d){
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'ask-popover-itemrow';
+            row.innerHTML = '<div class="txt"><div class="ttl"></div><div class="meta"></div></div><span class="chev" aria-hidden="true">›</span>';
+            row.querySelector('.ttl').textContent = d.label;
+            row.querySelector('.meta').textContent = d.page + ' · ' + (d.status === 'retired' ? 'retired' : d.health.replace('_', ' '));
+            row.addEventListener('click', function(){ adminDetail(d, data.revision); });
+            body.appendChild(row);
+          });
+          if (!data.destinations.length) {
+            const empty = document.createElement('div');
+            empty.className = 'ask-popover-note';
+            empty.textContent = 'No destinations are mapped yet.';
+            body.appendChild(empty);
+          }
+          renderActions(body, [
+            { label: '+ Map a section on this page', primary: true, onClick: function(){ adminMapStart(data.revision, data.destinations); } },
+            { label: 'Verify this page', onClick: function(){ adminVerifyPage(data.destinations); } }
+          ]);
+        });
+      }, { onBack: adminMenu });
+    }
+    function adminMapStart(revision, existing){
+      closePlusMenu();
+      startPicker(function(captured){
+        if (!captured) { adminList(); return; }
+        adminMapForm(captured, revision, existing);
+      });
+    }
+    function adminMapForm(captured, revision, existing){
+      renderSecondaryPanel('Map this section', function(body){
+        if (!captured.ok) {
+          renderPopoverError(body, captured.error);
+          renderActions(body, [{ label: 'Try again', primary: true, onClick: function(){ adminMapStart(revision, existing); } }, { label: 'Back', onClick: adminList }]);
+          return;
+        }
+        const info = document.createElement('div');
+        info.className = 'ask-popover-note';
+        info.textContent = 'Page ' + captured.page + ' — ' + describeLocator(captured);
+        body.appendChild(info);
+        const label = renderTextField(body, { placeholder: 'Button label, e.g. Pricing (max 30)' });
+        label.value = captured.suggestedLabel;
+        const purpose = renderTextField(body, { placeholder: 'Approved purpose — what visitors find here (max 240)', multiline: true });
+        renderActions(body, [
+          { label: 'Approve & save', primary: true, onClick: function(){
+            const id = suggestId(label.value);
+            if (!id) { renderPopoverError(body, 'Please give this a short label.'); return; }
+            adminAction('siteMapUpsert', { expectedRevision: revision, destination: { id: id, label: label.value, purpose: purpose.value, page: captured.page, locator: captured.locator, expectHeading: captured.expectHeading } }).then(function(data){
+              if (!data.ok) { renderPopoverError(body, data.error); return; }
+              adminList();
+            });
+          } },
+          { label: 'Cancel', onClick: adminList }
+        ]);
+      }, { onBack: adminList });
+    }
+    function adminDetail(d, revision){
+      renderSecondaryPanel(d.label, function(body){
+        const p = document.createElement('div');
+        p.className = 'ask-popover-note';
+        p.textContent = d.page + ' · ' + (d.status === 'retired' ? 'retired' : d.health.replace('_', ' ')) + ' · approved by ' + ((d.approvedBy && d.approvedBy.name) || 'unknown') + '\n' + d.purpose;
+        body.appendChild(p);
+        renderActions(body, [
+          { label: 'Retire', danger: true, onClick: function(){ adminAction('siteMapRetire', { id: d.id, expectedRevision: revision }).then(adminList); } },
+          { label: 'Back', onClick: adminList }
+        ]);
+      }, { onBack: adminList });
+    }
+    /** Re-checks every destination mapped to THIS page against the live DOM and records health (operator-triggered; no visitor telemetry). */
+    function adminVerifyPage(destinations){
+      const here = currentPath();
+      const mine = destinations.filter(function(d){ return d.status === 'approved' && d.page === here; });
+      const outcomes = [];
+      let chain = Promise.resolve();
+      mine.forEach(function(d){
+        const r = resolveTarget({ id: d.id, label: d.label, page: d.page, locator: d.locator, expectHeading: d.expectHeading });
+        const health = r.ok ? 'healthy' : (r.reason === 'missing' ? 'missing' : (r.reason === 'changed' ? 'changed' : 'needs_review'));
+        outcomes.push(d.label + ': ' + (r.ok ? 'healthy' : health.replace('_', ' ') + ' (' + r.reason + ')'));
+        if (health !== d.health) chain = chain.then(function(){ return adminAction('siteMapHealth', { id: d.id, health: health }); });
+      });
+      chain.then(function(){
+        renderSecondaryPanel('Verify this page', function(body){
+          const p = document.createElement('div');
+          p.className = 'ask-popover-note';
+          p.textContent = mine.length ? outcomes.join('\n') : 'No destinations are mapped to this page.';
+          body.appendChild(p);
+          renderActions(body, [{ label: 'Done', primary: true, onClick: adminList }]);
+        }, { onBack: adminList });
+      });
+    }
+
+    // ---------- boot ----------
+    fetchRegistry();
+    resumeAfterLoad();
+
+    return {
+      handleResponse: handleResponse, adminList: adminList,
+      // exposed for deterministic tests only (not used by other runtime code)
+      _t: { resolveTarget: resolveTarget, captureLocator: captureLocator, loadRegistry: loadRegistry, registry: registry, go: go, normalizePath: normalizePath, findMappable: findMappable, ready: ready, takePending: takePending, suggestId: suggestId, PENDING_KEY: PENDING_KEY }
+    };
+  })();
+  // <<< LIVEASK SITE NAV (POC) END
 
   updatePrimaryControlState();
 })();
