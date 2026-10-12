@@ -2494,6 +2494,7 @@
         renderRow2(quickReplyChoices);
         if (replyText) thread.appendChild(a);
         else a.remove();
+        if (data.handoffOffer) presentHandoffOffer(data.handoffOffer);
         if (quickReplyChoices.length) completeInputInstruction();
         else if (data.inputInstruction) presentInputInstruction(data.inputInstruction, a);
         else if (replyText) activateInputInstruction(replyText, a);
@@ -4451,6 +4452,7 @@
       finishVoice({ force: true, voiceUnavailable: true, notice: 'The guided tour could not start in Voice. Text is still ready here.' });
       return;
     }
+    if (data.type === 'handoff.offer') { presentHandoffOffer(data.offer); return; }
     if (data.type === 'voice.terminated') {
       finishVoice({ force: true, voiceUnavailable: true, notice: voiceFailureMessage(data.reason) });
       return;
@@ -4464,6 +4466,35 @@
     if (data.type === 'sideband.failed' || data.type === 'sideband.error') {
       finishVoice({ force: true, voiceUnavailable: true, notice: 'Voice lost its secure control connection. Text is still ready here.' });
     }
+  }
+
+  // Exec / Human Voice PoC: the Worker returns a governed `handoffOffer` only when
+  // HANDOFF_MODE=on and a deterministic rule fired. The module is lazy-loaded so
+  // sites with the feature off never fetch it. Consent is a UI event inside it.
+  var handoffVisitorApi = null, handoffVisitorLoading = null, handoffPending = [], handoffHumanActive = false;
+  function presentHandoffOffer(offer){
+    if (!offer || !offer.handoffId) return;
+    if (handoffVisitorApi) { handoffVisitorApi.present(offer); return; }
+    handoffPending.push(offer);
+    if (handoffVisitorLoading) return;
+    handoffVisitorLoading = new Promise(function(resolve, reject){
+      const s = document.createElement('script');
+      s.src = (cfg.baseUrl || '') + 'handoff-visitor.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    }).then(function(){
+      handoffVisitorApi = window.LiveAskHandoffVisitor.init({
+        workerUrl: WORKER_URL, thread: thread, scroll: maybeScrollToBottom,
+        getAiVoiceBinding: function(){
+          return { voiceSessionId: voiceSessionId,
+            providerCallId: voiceControlSocket ? new URL(voiceControlSocket.url).searchParams.get('call_id') : null };
+        },
+        onTalkNow: async function(){ handoffHumanActive = true; if (voiceSessionIsOpen()) await finishVoice({ force: true, showEnding: false }); },
+        onEnd: function(){ handoffHumanActive = false; },
+        onFallback: function(){}
+      });
+      handoffPending.splice(0).forEach(function(o){ handoffVisitorApi.present(o); });
+    }).catch(function(){ handoffPending = []; handoffVisitorLoading = null; });
   }
 
   function workerWebSocketUrl(data){
@@ -4497,6 +4528,7 @@
 
   async function startVoice(options){
     options = options || {};
+    if (handoffHumanActive) { renderVoiceNotice('You are in a human call. End it before starting AI Voice.'); return; }
     if (voiceMode !== 'idle') return;
     if (tourAuthoringActive) {
       renderVoiceNotice('Voice conversation is paused while you create this Tour. Dictate is still available.');
