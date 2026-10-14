@@ -36,7 +36,7 @@
     var diag = opts.diag || function () {};
 
     var pc = null, ws = null, closed = false, connectedReported = false;
-    var pendingCandidates = [], remoteSet = false, wsRetries = 0, restartTimer = null, giveUpTimer = null, hbTimer = null;
+    var pendingCandidates = [], remoteSet = false, wsRetries = 0, restartTimer = null, giveUpTimer = null, hbTimer = null, iceRefreshTimer = null;
     var startedAt = Date.now(), everConnected = false, makingOffer = false;
 
     function status(s, detail) { diag('call.' + s, detail); try { onStatus(s, detail || null); } catch (e) {} }
@@ -118,12 +118,36 @@
       callApi('report', body({ state: 'failed', reason: reason })).catch(function () {});
     }
 
+    function scheduleIceRefresh(ttlSeconds, retry) {
+      clearTimeout(iceRefreshTimer);
+      var delay = retry ? 60000 : Math.max(60000, Math.floor((ttlSeconds || 600) * 500));
+      iceRefreshTimer = setTimeout(async function () {
+        if (closed || !pc) return;
+        try {
+          var fresh = await callApi('ice', body({ refresh: true }));
+          if (fresh && fresh.ok && fresh.relay) {
+            var config = pc.getConfiguration();
+            pc.setConfiguration(Object.assign({}, config, { iceServers: fresh.iceServers }));
+            diag('call.ice_renewed');
+            scheduleIceRefresh(fresh.ttlSeconds);
+          } else {
+            diag('call.ice_renewal_failed', fresh && fresh.reason);
+            scheduleIceRefresh(0, true);
+          }
+        } catch (e) {
+          diag('call.ice_renewal_failed', String(e && e.name));
+          scheduleIceRefresh(0, true);
+        }
+      }, delay);
+    }
+
     async function start() {
       status('preparing');
       var ice = await callApi('ice', body());
       if (!ice || !ice.ok) { fail('ice_refused'); return; }
       diag('call.ice', { relay: !!ice.relay, reason: ice.reason || null });
       pc = new RTCPeerConnection({ iceServers: ice.iceServers, bundlePolicy: 'max-bundle', iceTransportPolicy: (typeof window !== 'undefined' && window.__LIVEASK_FORCE_RELAY === true) ? 'relay' : 'all' });   // relay-only is a test hook (forced-relay test); never set in production
+      if (ice.relay) scheduleIceRefresh(ice.ttlSeconds);
       if (stream) stream.getTracks().forEach(function (tr) { pc.addTrack(tr, stream); });
       pc.onicecandidate = function (ev) { send({ type: 'candidate', candidate: ev.candidate ? ev.candidate.toJSON() : null }); };
       pc.ontrack = function (ev) {
@@ -162,7 +186,7 @@
     function setMuted(m) { if (stream) stream.getAudioTracks().forEach(function (t) { t.enabled = !m; }); }
     function close(opts2) {
       if (closed) return; closed = true;
-      clearInterval(hbTimer); clearTimeout(restartTimer); clearTimeout(giveUpTimer);
+      clearInterval(hbTimer); clearTimeout(restartTimer); clearTimeout(giveUpTimer); clearTimeout(iceRefreshTimer);
       try { send({ type: 'bye' }); } catch (e) {}
       try { if (ws) ws.close(1000, 'bye'); } catch (e) {}
       try { if (pc) pc.close(); } catch (e) {}
@@ -188,6 +212,7 @@
   var BTN_PRIMARY = Object.assign({}, BTN, { background: '#005FAE', borderColor: '#005FAE', color: '#fff' });
   var BTN_DANGER = Object.assign({}, BTN, { background: '#B3261E', borderColor: '#B3261E', color: '#fff' });
   function fmt(ms) { var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function nowServer(st) { return Date.now() + (st.clockSkew || 0); }
 
   function api(route, body) {
     var url = new URL('/handoff/' + route, hooks.workerUrl);
@@ -213,7 +238,12 @@
   function ownerName(st) { return (st.view && st.view.owner && st.view.owner.name) || st.offer.owner.name; }
   function pronoun(st) { var p = (st.view && st.view.owner && st.view.owner.pronoun) || st.offer.owner.pronoun; return p === 'he' || p === 'she' ? p : 'they'; }
 
-  function set(st, nodes) { st.card.textContent = ''; nodes.forEach(function (n) { if (n) st.card.appendChild(n); }); try { hooks.scroll && hooks.scroll(); } catch (e) {} }
+  function set(st, nodes) {
+    st.card.textContent = ''; nodes.forEach(function (n) { if (n) st.card.appendChild(n); });
+    if (st.card.querySelector('[data-le-handoff=accept], [data-le-contact-choices], [data-le-fallback-choices]')) st.card.setAttribute('data-le-choice-active', 'true');
+    else st.card.removeAttribute('data-le-choice-active');
+    try { hooks.onChoiceState && hooks.onChoiceState(); hooks.scroll && hooks.scroll(); } catch (e) {}
+  }
   function row() { var r = mk('div', null, { display: 'flex', gap: '10px' }); for (var i = 0; i < arguments.length; i++) if (arguments[i]) r.appendChild(arguments[i]); return r; }
   function btn(label, style, fn, id) { var b = mk('button', label, style, { type: 'button', 'data-le-handoff': id || label.toLowerCase().replace(/\W+/g, '-') }); b.addEventListener('click', fn); return b; }
 
@@ -223,7 +253,10 @@
     if (phase === 'offered') {
       return set(st, [mk('p', st.offer.text, { margin: 0 }), row(btn(st.offer.accept, BTN_PRIMARY, function () { accept(st); }, 'accept'), btn(st.offer.decline, BTN, function () { decline(st); }, 'decline'))]);
     }
-    if (phase === 'asking') return set(st, [mk('p', 'Asking ' + ownerName(st) + ' now. Hang on for a moment…', { margin: 0 }), btn('CANCEL', BTN, function () { decline(st); }, 'cancel')]);
+    if (phase === 'asking') {
+      var remaining = mk('p', v && v.expiresAt ? fmt(v.expiresAt - nowServer(st)) + ' remaining' : 'Waiting for a response', { margin: 0, fontSize: '13px', color: '#5B6878' }, { 'data-le-handoff': 'remaining' });
+      return set(st, [mk('p', 'Checking whether ' + ownerName(st) + ' can take your call. You can keep waiting or leave details.', { margin: 0 }), remaining, btn('CANCEL', BTN, function () { decline(st); }, 'cancel')]);
+    }
     if (phase === 'ready') {
       return set(st, [mk('p', ownerName(st) + ' is ready to speak.', { margin: 0, fontWeight: '600' }),
         mk('p', 'Tap Talk Now to start the call. Your microphone will be used for this call only; it is not recorded.', { margin: 0, fontSize: '13px', color: '#5B6878' }),
@@ -232,11 +265,26 @@
     if (phase === 'connecting' || phase === 'connected') {
       var connected = phase === 'connected';
       var mute = btn(st.muted ? 'UNMUTE' : 'MUTE', BTN, function () { st.muted = !st.muted; if (st.ctl) st.ctl.setMuted(st.muted); mute.textContent = st.muted ? 'UNMUTE' : 'MUTE'; }, 'mute');
+      var contact = connected && v.contactRequest && st.contactAnswered !== v.contactRequest.id ?
+        mk('div', null, { padding: '12px', border: '1px solid #DCDFE3', borderRadius: '10px' }, { 'data-le-contact-choices': 'true' }) : null;
+      if (contact) {
+        contact.appendChild(mk('p', ownerName(st) + ' has requested a contact method in case you need to reconnect. This is optional; your call continues.', { margin: '0 0 8px' }));
+        contact.appendChild(row(btn('PHONE', BTN_PRIMARY, function () { contactChoice(st, 'phone'); }, 'contact-phone'),
+          btn('EMAIL', BTN, function () { contactChoice(st, 'email'); }, 'contact-email')));
+      }
       return set(st, [mk('p', connected ? 'Live with ' + ownerName(st) : 'Connecting you to ' + ownerName(st) + '…', { margin: 0, fontWeight: '700' }),
         mk('p', connected && v.media ? '' : '', { margin: 0, fontSize: '13px', color: '#5B6878' }, { 'data-le-handoff': 'note' }),
+        connected && v.callbackIntent ? mk('p', ownerName(st) + ' intends to call you back ' + (v.callbackIntent.label || ('within ' + v.callbackIntent.minutes + ' minutes')) + '. This is an intention, not a guaranteed appointment.', { margin: 0, padding: '10px', border: '1px solid #DCDFE3', borderRadius: '10px' }) : null,
+        contact,
         row(mute, btn('END', BTN_DANGER, function () { end(st); }, 'end'))]);
     }
     drawEnd(st);
+  }
+  function contactChoice(st, choice) {
+    if (!st.view || !st.view.contactRequest || !hooks.onContactChoice) return;
+    st.contactAnswered = st.view.contactRequest.id;
+    draw(st);
+    hooks.onContactChoice(choice);
   }
 
   function drawEnd(st) {
@@ -245,10 +293,24 @@
     var line;
     if (v.state === 'ended') line = 'Call ended' + (v.durationMs ? ' · ' + fmt(v.durationMs) : '') + '. I’m still here if you need anything else.';
     else if (v.fallback || v.state === 'owner_declined' || v.state === 'owner_timeout' || v.state === 'owner_unavailable' || v.state === 'expired' || v.state === 'media_failed' || v.state === 'connection_lost' || v.state === 'notification_failed')
-      line = ownerName(st) + ' can\u2019t jump on right now, but I can make sure ' + pronoun(st) + (pronoun(st) === 'they' ? ' have your details and get' : ' has your details and gets') + ' back to you. Would you like to leave them here?';
+      line = ownerName(st) + ' can\u2019t jump on right now, but I can pass on your details so ' + pronoun(st) + ' can follow up. Would you prefer contact by phone or email?';
     else line = 'No problem. I’m still here to help.';
-    set(st, [mk('p', line, { margin: 0 }, { 'data-le-handoff': 'ended' })]);
+    var fallback = v.fallback || ['owner_declined', 'owner_timeout', 'owner_unavailable', 'media_failed', 'connection_lost', 'notification_failed', 'expired'].indexOf(v.state) >= 0;
+    var choices = fallback && hooks.onContactChoice ? mk('div', null, { display: 'flex', gap: '8px' }, { 'data-le-fallback-choices': 'true' }) : null;
+    if (choices) {
+      choices.appendChild(btn('PHONE', BTN_PRIMARY, function () { fallbackChoice(st, 'phone'); }, 'fallback-phone'));
+      choices.appendChild(btn('EMAIL', BTN, function () { fallbackChoice(st, 'email'); }, 'fallback-email'));
+    }
+    set(st, [mk('p', line, { margin: 0 }, { 'data-le-handoff': 'ended' }), choices]);
     if (v.fallback || ['owner_declined', 'owner_timeout', 'owner_unavailable', 'media_failed', 'connection_lost', 'notification_failed', 'expired'].indexOf(v.state) >= 0) { try { hooks.onFallback && hooks.onFallback(v.state); } catch (e) {} }
+  }
+  function fallbackChoice(st, choice) {
+    if (!hooks.onContactChoice || st.fallbackAnswered) return;
+    st.fallbackAnswered = true;
+    var choices = st.card.querySelector('[data-le-fallback-choices]'); if (choices) choices.remove();
+    st.card.removeAttribute('data-le-choice-active');
+    try { hooks.onChoiceState && hooks.onChoiceState(); } catch (e) {}
+    hooks.onContactChoice(choice);
   }
 
   function stopAll(st, keepDone) {
@@ -262,6 +324,11 @@
   function startPolling(st) {
     clearInterval(st.poll);
     st.poll = setInterval(function () { refresh(st); }, 3000);   // doubles as the visitor liveness heartbeat
+    clearInterval(st.tick);
+    st.tick = setInterval(function () {
+      var remaining = st.card.querySelector('[data-le-handoff=remaining]');
+      if (remaining && st.view && st.view.expiresAt) remaining.textContent = fmt(st.view.expiresAt - nowServer(st)) + ' remaining';
+    }, 500);
   }
   async function refresh(st) {
     if (st.done) return;
@@ -274,9 +341,12 @@
       return;
     }
     st.fails = 0;
+    if (typeof r.serverNow === 'number') st.clockSkew = r.serverNow - Date.now();
     var prev = st.view; st.view = r.view; if (st.view.phase === 'connected' && !st.connectedAt) st.connectedAt = Date.now();
     if (st.view.media && (st.view.phase === 'connecting' || st.view.phase === 'connected') && st.stream) syncCall(st);
-    if (!prev || prev.phase !== st.view.phase || prev.terminal !== st.view.terminal) draw(st);
+    if (!prev || prev.phase !== st.view.phase || prev.terminal !== st.view.terminal ||
+      (prev.contactRequest && prev.contactRequest.id) !== (st.view.contactRequest && st.view.contactRequest.id) ||
+      (prev.callbackIntent && prev.callbackIntent.advisedAt) !== (st.view.callbackIntent && st.view.callbackIntent.advisedAt)) draw(st);
   }
   function syncCall(st) {
     var m = st.view.media; if (!m) return;
@@ -295,6 +365,7 @@
 
   async function accept(st) {
     var r = await api('visitor/accept', body(st));
+    if (typeof r.serverNow === 'number') st.clockSkew = r.serverNow - Date.now();
     if (!r.ok) { st.view = { state: 'expired', terminal: true, fallback: true, owner: st.offer.owner }; return draw(st); }
     st.view = r.view || { phase: 'asking', owner: st.offer.owner, state: r.state };
     if (r.state === 'notification_failed' || (r.view && r.view.terminal)) { st.view = r.view || { state: r.state, terminal: true, fallback: true, owner: st.offer.owner }; return draw(st); }

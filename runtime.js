@@ -2131,7 +2131,8 @@
   // failure) actually lands.
   function syncDefaultTourButton(){
     let btn = row2Left.querySelector('.ask-default-tour-btn');
-    if (cfg.tenantId === 'autodemo-intake' || tourToken || defaultTourStarting) {
+    if (cfg.tenantId === 'autodemo-intake' || tourToken || defaultTourStarting ||
+        row2Left.querySelector('.ask-quickreply-btn') || thread.querySelector('[data-le-choice-active]')) {
       if (btn) btn.remove();
       return;
     }
@@ -4479,7 +4480,7 @@
     if (handoffVisitorLoading) return;
     handoffVisitorLoading = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = (cfg.baseUrl || '') + 'handoff-visitor.js';
+      s.src = (cfg.baseUrl || '') + 'handoff-visitor.js?v=20261015-exec-phase-one';
       s.onload = resolve; s.onerror = reject;
       document.head.appendChild(s);
     }).then(function(){
@@ -4491,6 +4492,11 @@
         },
         onTalkNow: async function(){ handoffHumanActive = true; if (voiceSessionIsOpen()) await finishVoice({ force: true, showEnding: false }); },
         onEnd: function(){ handoffHumanActive = false; },
+        onChoiceState: syncDefaultTourButton,
+        onContactChoice: function(choice){
+          // Existing governed chat/OTP flow owns contact capture; no human audio is sampled.
+          submitToPanel(choice === 'phone' ? 'I would like to provide my phone number for a callback.' : 'I would like to provide my email address for a callback.', { showVisitorBubble: true });
+        },
         onFallback: function(){}
       });
       handoffPending.splice(0).forEach(function(o){ handoffVisitorApi.present(o); });
