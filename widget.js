@@ -110,7 +110,8 @@
   };
 
   var runtimeScript = document.createElement('script');
-  runtimeScript.src = baseUrl + 'runtime.js?v=20261015-exec-phase-one';
+  runtimeScript.src = baseUrl + 'runtime.js?v=20261016-uip-handoff';
   runtimeScript.async = false; // preserve load-then-execute ordering relative to the config handoff above
   document.body.appendChild(runtimeScript);
 })();
+
