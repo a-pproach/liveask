@@ -208,9 +208,7 @@
     if (attrs) Object.keys(attrs).forEach(function (k) { el.setAttribute(k, attrs[k]); });
     return el;
   }
-  var BTN = { font: 'inherit', fontWeight: '700', letterSpacing: '.04em', padding: '12px 14px', borderRadius: '10px', border: '2px solid #0E1B2C', background: '#FAFAF7', color: '#1D2A3A', cursor: 'pointer', minHeight: '44px', flex: '1' };
-  var BTN_PRIMARY = Object.assign({}, BTN, { background: '#005FAE', borderColor: '#005FAE', color: '#fff' });
-  var BTN_DANGER = Object.assign({}, BTN, { background: '#B3261E', borderColor: '#B3261E', color: '#fff' });
+  function action(label, id, onClick, kind) { return { label: label, id: id, onClick: onClick, kind: kind || 'secondary' }; }
   function fmt(ms) { var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   function nowServer(st) { return Date.now() + (st.clockSkew || 0); }
 
@@ -235,48 +233,60 @@
   }
 
   function body(st) { return { handoffId: st.offer.handoffId, offerToken: st.offer.offerToken }; }
-  function ownerName(st) { return (st.view && st.view.owner && st.view.owner.name) || st.offer.owner.name; }
+  function ownerName(st) { return (st.view && st.view.owner && st.view.owner.name) || (st.offer.owner && st.offer.owner.name) || 'the Exec'; }
   function pronoun(st) { var p = (st.view && st.view.owner && st.view.owner.pronoun) || st.offer.owner.pronoun; return p === 'he' || p === 'she' ? p : 'they'; }
 
-  function set(st, nodes) {
+  function set(st, nodes, ui) {
     st.card.textContent = ''; nodes.forEach(function (n) { if (n) st.card.appendChild(n); });
-    if (st.card.querySelector('[data-le-handoff=accept], [data-le-contact-choices], [data-le-fallback-choices]')) st.card.setAttribute('data-le-choice-active', 'true');
+    st.card.hidden = !!(ui && ui.hideCard);
+    st.card.classList.toggle('ask-handoff-live', !!(ui && ui.live));
+    if (ui && ui.actions && ui.actions.length) st.card.setAttribute('data-le-choice-active', 'true');
     else st.card.removeAttribute('data-le-choice-active');
-    try { hooks.onChoiceState && hooks.onChoiceState(); hooks.scroll && hooks.scroll(); } catch (e) {}
+    try { hooks.onUiState && hooks.onUiState(ui || null); hooks.onChoiceState && hooks.onChoiceState(); hooks.scroll && hooks.scroll(); } catch (e) {}
   }
-  function row() { var r = mk('div', null, { display: 'flex', gap: '10px' }); for (var i = 0; i < arguments.length; i++) if (arguments[i]) r.appendChild(arguments[i]); return r; }
-  function btn(label, style, fn, id) { var b = mk('button', label, style, { type: 'button', 'data-le-handoff': id || label.toLowerCase().replace(/\W+/g, '-') }); b.addEventListener('click', fn); return b; }
+  function notice(st, id, text) {
+    if (st.noticeId === id) return;
+    st.noticeId = id;
+    var line = mk('p', text, null, { class: 'ask-handoff-prompt ask-handoff-attention' });
+    hooks.thread.insertBefore(line, st.card);
+    setTimeout(function () { line.classList.remove('ask-handoff-attention'); }, 3200);
+  }
 
   function draw(st) {
     var v = st.view, phase = v ? v.phase : 'offered';
     if (v && v.terminal) return drawEnd(st);
     if (phase === 'offered') {
-      return set(st, [mk('p', st.offer.text, { margin: 0 }), row(btn(st.offer.accept, BTN_PRIMARY, function () { accept(st); }, 'accept'), btn(st.offer.decline, BTN, function () { decline(st); }, 'decline'))]);
+      return set(st, [mk('p', st.offer.text, null, { class: 'ask-handoff-prompt ask-handoff-attention' })], {
+        guidance: 'Choose whether you’d like me to try ' + ownerName(st) + ' now.',
+        actions: [action('Yes', 'accept', function () { accept(st); }, 'primary'), action('Not now', 'decline', function () { decline(st); })]
+      });
     }
     if (phase === 'asking') {
-      var remaining = mk('p', v && v.expiresAt ? fmt(v.expiresAt - nowServer(st)) + ' remaining' : 'Waiting for a response', { margin: 0, fontSize: '13px', color: '#5B6878' }, { 'data-le-handoff': 'remaining' });
-      return set(st, [mk('p', 'Checking whether ' + ownerName(st) + ' can take your call. You can keep waiting or leave details.', { margin: 0 }), remaining, btn('CANCEL', BTN, function () { decline(st); }, 'cancel')]);
+      return set(st, [mk('p', 'I’m checking whether ' + ownerName(st) + ' can take your call now.', null, { class: 'ask-handoff-prompt ask-handoff-attention' })], {
+        guidance: 'Waiting for ' + ownerName(st) + '…', expiresAt: v.expiresAt,
+        actions: [action('Keep waiting', 'keep-waiting', function () {}, 'primary'), action('Leave details', 'leave-details', function () { decline(st, true); })]
+      });
     }
     if (phase === 'ready') {
-      return set(st, [mk('p', ownerName(st) + ' is ready to speak.', { margin: 0, fontWeight: '600' }),
-        mk('p', 'Tap Talk Now to start the call. Your microphone will be used for this call only; it is not recorded.', { margin: 0, fontSize: '13px', color: '#5B6878' }),
-        btn('TALK NOW', BTN_PRIMARY, function () { talkNow(st); }, 'talk-now'), mk('p', null, { margin: 0, color: '#B3261E', fontSize: '13px' }, { 'data-le-handoff': 'msg' })]);
+      return set(st, [mk('p', ownerName(st) + ' is ready to speak. Your microphone will be used for this call only; it is not recorded.', null, { class: 'ask-handoff-prompt' }),
+        mk('p', null, { margin: 0, color: '#B3261E', fontSize: '13px' }, { 'data-le-handoff': 'msg' })], {
+        guidance: 'Ready to connect with ' + ownerName(st) + '.',
+        actions: [action('Talk now', 'talk-now', function () { talkNow(st); }, 'primary')]
+      });
     }
     if (phase === 'connecting' || phase === 'connected') {
       var connected = phase === 'connected';
-      var mute = btn(st.muted ? 'UNMUTE' : 'MUTE', BTN, function () { st.muted = !st.muted; if (st.ctl) st.ctl.setMuted(st.muted); mute.textContent = st.muted ? 'UNMUTE' : 'MUTE'; }, 'mute');
-      var contact = connected && v.contactRequest && st.contactAnswered !== v.contactRequest.id ?
-        mk('div', null, { padding: '12px', border: '1px solid #DCDFE3', borderRadius: '10px' }, { 'data-le-contact-choices': 'true' }) : null;
-      if (contact) {
-        contact.appendChild(mk('p', ownerName(st) + ' has requested a contact method in case you need to reconnect. This is optional; your call continues.', { margin: '0 0 8px' }));
-        contact.appendChild(row(btn('PHONE', BTN_PRIMARY, function () { contactChoice(st, 'phone'); }, 'contact-phone'),
-          btn('EMAIL', BTN, function () { contactChoice(st, 'email'); }, 'contact-email')));
-      }
-      return set(st, [mk('p', connected ? 'Live with ' + ownerName(st) : 'Connecting you to ' + ownerName(st) + '…', { margin: 0, fontWeight: '700' }),
-        mk('p', connected && v.media ? '' : '', { margin: 0, fontSize: '13px', color: '#5B6878' }, { 'data-le-handoff': 'note' }),
-        connected && v.callbackIntent ? mk('p', ownerName(st) + ' intends to call you back ' + (v.callbackIntent.label || ('within ' + v.callbackIntent.minutes + ' minutes')) + '. This is an intention, not a guaranteed appointment.', { margin: 0, padding: '10px', border: '1px solid #DCDFE3', borderRadius: '10px' }) : null,
-        contact,
-        row(mute, btn('END', BTN_DANGER, function () { end(st); }, 'end'))]);
+      var needsContact = connected && v.contactRequest && st.contactAnswered !== v.contactRequest.id;
+      if (needsContact) notice(st, v.contactRequest.id, ownerName(st) + ' has requested a contact method in case you need to reconnect. This is optional; your call continues.');
+      var actions = needsContact ? [action('Phone', 'contact-phone', function () { contactChoice(st, 'phone'); }, 'primary'),
+        action('Email', 'contact-email', function () { contactChoice(st, 'email'); })] : [];
+      actions.push(action(st.muted ? 'Unmute' : 'Mute', 'mute', function () { st.muted = !st.muted; if (st.ctl) st.ctl.setMuted(st.muted); draw(st); }));
+      actions.push(action('End call', 'end', function () { end(st); }, 'danger'));
+      return set(st, connected ? [mk('p', 'Live with ' + ownerName(st), null, { class: 'ask-handoff-live-title' })] : [], {
+        live: connected, inCall: true, hideCard: !connected,
+        guidance: needsContact ? 'Please choose your preferred contact method…' : connected ? 'Your call with ' + ownerName(st) + ' is in progress.' : 'Connecting…',
+        actions: actions
+      });
     }
     drawEnd(st);
   }
@@ -289,8 +299,8 @@
 
   function drawEnd(st) {
     stopAll(st, true);
-    // The live card is inserted when the offer begins. Move the terminal
-    // event after messages exchanged during the call, exactly once.
+    // Contact chat may have arrived since the offer card was first inserted.
+    // Put the terminal event at its actual position in the conversation.
     if (!st.terminalPlaced && st.card.parentNode === hooks.thread) {
       hooks.thread.appendChild(st.card);
       st.terminalPlaced = true;
@@ -304,20 +314,18 @@
       line = ownerName(st) + ' can\u2019t jump on right now, but I can pass on your details so ' + pronoun(st) + ' can follow up. Would you prefer contact by phone or email?';
     else line = 'No problem. I’m still here to help.';
     var fallback = v.fallback || ['owner_declined', 'owner_timeout', 'owner_unavailable', 'media_failed', 'connection_lost', 'notification_failed', 'expired'].indexOf(v.state) >= 0;
-    var choices = fallback && hooks.onContactChoice ? mk('div', null, { display: 'flex', gap: '8px' }, { 'data-le-fallback-choices': 'true' }) : null;
-    if (choices) {
-      choices.appendChild(btn('PHONE', BTN_PRIMARY, function () { fallbackChoice(st, 'phone'); }, 'fallback-phone'));
-      choices.appendChild(btn('EMAIL', BTN, function () { fallbackChoice(st, 'email'); }, 'fallback-email'));
-    }
-    set(st, [mk('p', line, { margin: 0 }, { 'data-le-handoff': 'ended' }), choices]);
+    var actions = fallback && hooks.onContactChoice && !st.fallbackAnswered ?
+      [action('Phone', 'fallback-phone', function () { fallbackChoice(st, 'phone'); }, 'primary'),
+        action('Email', 'fallback-email', function () { fallbackChoice(st, 'email'); })] : [];
+    set(st, [mk('p', line, null, { 'data-le-handoff': 'ended', class: fallback ? 'ask-handoff-prompt ask-handoff-attention' : '' })],
+      actions.length ? { guidance: 'Please choose your preferred contact method…', actions: actions } : null);
     if (v.fallback || ['owner_declined', 'owner_timeout', 'owner_unavailable', 'media_failed', 'connection_lost', 'notification_failed', 'expired'].indexOf(v.state) >= 0) { try { hooks.onFallback && hooks.onFallback(v.state); } catch (e) {} }
   }
   function fallbackChoice(st, choice) {
     if (!hooks.onContactChoice || st.fallbackAnswered) return;
     st.fallbackAnswered = true;
-    var choices = st.card.querySelector('[data-le-fallback-choices]'); if (choices) choices.remove();
     st.card.removeAttribute('data-le-choice-active');
-    try { hooks.onChoiceState && hooks.onChoiceState(); } catch (e) {}
+    try { hooks.onUiState && hooks.onUiState(null); hooks.onChoiceState && hooks.onChoiceState(); } catch (e) {}
     hooks.onContactChoice(choice);
   }
 
@@ -334,8 +342,7 @@
     st.poll = setInterval(function () { refresh(st); }, 3000);   // doubles as the visitor liveness heartbeat
     clearInterval(st.tick);
     st.tick = setInterval(function () {
-      var remaining = st.card.querySelector('[data-le-handoff=remaining]');
-      if (remaining && st.view && st.view.expiresAt) remaining.textContent = fmt(st.view.expiresAt - nowServer(st)) + ' remaining';
+      if (st.view && st.view.phase === 'asking' && st.view.expiresAt && hooks.onTimer) hooks.onTimer(fmt(st.view.expiresAt - nowServer(st)) + ' remaining');
     }, 500);
   }
   async function refresh(st) {
@@ -365,7 +372,7 @@
     st.ctl = LiveAskHumanCall.create({
       role: 'visitor', tuple: tuple, audioEl: st.audio, localStream: st.stream, wsBase: wsUrl.toString(),
       callApi: function (route, b) { return api('media/' + route, b); },
-      onStatus: function (s) { var n = st.card.querySelector('[data-le-handoff=note]'); if (n) n.textContent = s === 'reconnecting' ? 'Reconnecting…' : s === 'audio_blocked' ? 'Tap the page once to hear audio.' : ''; }
+      onStatus: function (s) { if (hooks.onCallStatus) hooks.onCallStatus(s === 'reconnecting' ? 'Reconnecting…' : s === 'audio_blocked' ? 'Tap the page once to hear audio.' : ''); }
     });
     if (st.muted) st.ctl.setMuted(true);
     st.ctl.start().catch(function () {});
@@ -379,9 +386,9 @@
     if (r.state === 'notification_failed' || (r.view && r.view.terminal)) { st.view = r.view || { state: r.state, terminal: true, fallback: true, owner: st.offer.owner }; return draw(st); }
     draw(st); startPolling(st);
   }
-  async function decline(st) {
-    var r = await api('visitor/decline', body(st));
-    st.view = { state: 'visitor_declined', terminal: true, fallback: false, owner: st.offer.owner }; stopAll(st); draw(st);
+  async function decline(st, leaveDetails) {
+    await api('visitor/decline', body(st));
+    st.view = { state: 'visitor_declined', terminal: true, fallback: !!leaveDetails, owner: st.offer.owner }; draw(st);
   }
   async function talkNow(st) {
     var msg = st.card.querySelector('[data-le-handoff=msg]');
@@ -407,4 +414,5 @@
 
   window.LiveAskHandoffVisitor = { init: function (h) { hooks = h; return { present: present }; } };
 })();
+
 
