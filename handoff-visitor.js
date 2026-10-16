@@ -289,6 +289,12 @@
 
   function drawEnd(st) {
     stopAll(st, true);
+    // The live card is inserted when the offer begins. Move the terminal
+    // event after messages exchanged during the call, exactly once.
+    if (!st.terminalPlaced && st.card.parentNode === hooks.thread) {
+      hooks.thread.appendChild(st.card);
+      st.terminalPlaced = true;
+    }
     var v = st.view || {};
     var line;
     if (v.state === 'ended') line = 'Call ended' + (v.durationMs ? ' · ' + fmt(v.durationMs) : '') + '. I’m still here if you need anything else.';
