@@ -4480,7 +4480,7 @@
     if (handoffVisitorLoading) return;
     handoffVisitorLoading = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = (cfg.baseUrl || '') + 'handoff-visitor.js?v=20261016-chat-order';
+      s.src = (cfg.baseUrl || '') + 'handoff-visitor.js?v=20261016-incoming-callback';
       s.onload = resolve; s.onerror = reject;
       document.head.appendChild(s);
     }).then(function(){
