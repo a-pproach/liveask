@@ -298,6 +298,8 @@
     var v = st.view || {};
     var line;
     if (v.state === 'ended') line = 'Call ended' + (v.durationMs ? ' · ' + fmt(v.durationMs) : '') + '. I’m still here if you need anything else.';
+    else if (v.state === 'owner_declined' && v.callbackIntent)
+      line = ownerName(st) + ' can’t talk right now, but intends to get back to you ' + (v.callbackIntent.label || ('within ' + v.callbackIntent.minutes + ' minutes')) + '. Would you prefer contact by phone or email?';
     else if (v.fallback || v.state === 'owner_declined' || v.state === 'owner_timeout' || v.state === 'owner_unavailable' || v.state === 'expired' || v.state === 'media_failed' || v.state === 'connection_lost' || v.state === 'notification_failed')
       line = ownerName(st) + ' can\u2019t jump on right now, but I can pass on your details so ' + pronoun(st) + ' can follow up. Would you prefer contact by phone or email?';
     else line = 'No problem. I’m still here to help.';
