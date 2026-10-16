@@ -145,7 +145,7 @@
   }
 
   (function loadStyles() {
-    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20261008-mobile-tour-entry';
+    var cssUrl = (cfg.baseUrl || '') + 'widget.css?v=20261016-uip-handoff';
     function linkFallback() {
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -323,6 +323,11 @@
   // spoken, so the visual and spoken forms cannot become duplicate turns.
   let activeInputInstructionEl = null;
   let activeInputInstruction = null;
+  let handoffUiState = null;
+  const handoffTimer = document.createElement('span');
+  handoffTimer.className = 'ask-handoff-timer';
+  handoffTimer.hidden = true;
+  askPanel.querySelector('.ask-input-row').appendChild(handoffTimer);
   let inputInstructionAttentionTimer = null;
   let voicePromptEnabled = false;
   let voicePromptButton = null;
@@ -497,7 +502,8 @@
   // than a one-off special case.
   function setFinalPlaceholder(){
     ph.classList.remove('ask-fake-placeholder--instruction', 'ask-fake-placeholder--instruction-error');
-    ph.textContent = 'Ask another question';
+    ph.textContent = handoffUiState ? handoffUiState.guidance : 'Ask another question';
+    if (handoffUiState) ph.classList.add('ask-fake-placeholder--instruction');
   }
 
   // Only the compact UIP is persistent. The logo/menu and transcript remain
@@ -570,6 +576,7 @@
   let rotateFadeTimeout = null;
   let rotateTimer = null;
   function startRotation(){
+    if (handoffUiState) return;
     rotateTimer = setInterval(function(){
       ph.classList.add('fade');
       rotateFadeTimeout = setTimeout(function(){
@@ -2131,7 +2138,7 @@
   // failure) actually lands.
   function syncDefaultTourButton(){
     let btn = row2Left.querySelector('.ask-default-tour-btn');
-    if (cfg.tenantId === 'autodemo-intake' || tourToken || defaultTourStarting ||
+    if (cfg.tenantId === 'autodemo-intake' || tourToken || defaultTourStarting || handoffUiState ||
         row2Left.querySelector('.ask-quickreply-btn') || thread.querySelector('[data-le-choice-active]')) {
       if (btn) btn.remove();
       return;
@@ -2147,6 +2154,39 @@
       startDefaultTour('uip');
     });
     row2Left.appendChild(btn);
+  }
+
+  function renderHandoffUi(state){
+    handoffUiState = state && state.actions && state.actions.length ? state : null;
+    row2.classList.toggle('ask-row2--handoff', !!handoffUiState);
+    row2.classList.toggle('ask-row2--handoff-call', !!(handoffUiState && handoffUiState.inCall));
+    row2.classList.toggle('ask-row2--handoff-four', !!(handoffUiState && handoffUiState.actions.length > 2));
+    Array.prototype.forEach.call(row2Left.querySelectorAll('.ask-handoff-action'), function(b){ b.remove(); });
+    handoffTimer.hidden = !(handoffUiState && handoffUiState.expiresAt);
+    if (!handoffTimer.hidden) handoffTimer.textContent = 'Waiting…';
+    if (handoffUiState) {
+      clearInterval(rotateTimer); rotateTimer = null;
+      clearTimeout(rotateFadeTimeout); rotateFadeTimeout = null;
+      if (activeInputInstruction && !handoffUiState.inCall) completeInputInstruction();
+      if (!activeInputInstruction) {
+        ph.textContent = handoffUiState.guidance;
+        ph.classList.remove('fade', 'ask-fake-placeholder--instruction-error');
+        ph.classList.add('ask-fake-placeholder--instruction');
+      }
+      handoffUiState.actions.forEach(function(item){
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ask-handoff-action ask-handoff-action--' + item.kind;
+        b.textContent = item.label;
+        b.dataset.leHandoff = item.id;
+        b.addEventListener('click', item.onClick);
+        row2Left.appendChild(b);
+      });
+    } else {
+      handoffTimer.textContent = '';
+      if (!activeInputInstruction) setFinalPlaceholder();
+    }
+    syncDefaultTourButton();
   }
 
   function renderRow2(choices){
@@ -4480,12 +4520,15 @@
     if (handoffVisitorLoading) return;
     handoffVisitorLoading = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = (cfg.baseUrl || '') + 'handoff-visitor.js?v=20261016-incoming-callback';
+      s.src = (cfg.baseUrl || '') + 'handoff-visitor.js?v=20261016-uip-handoff';
       s.onload = resolve; s.onerror = reject;
       document.head.appendChild(s);
     }).then(function(){
       handoffVisitorApi = window.LiveAskHandoffVisitor.init({
         workerUrl: WORKER_URL, thread: thread, scroll: maybeScrollToBottom,
+        onUiState: renderHandoffUi,
+        onTimer: function(text){ handoffTimer.textContent = text; },
+        onCallStatus: function(text){ if (handoffUiState && text) { ph.textContent = text; ph.classList.add('ask-fake-placeholder--instruction'); } else if (handoffUiState) ph.textContent = handoffUiState.guidance; },
         getAiVoiceBinding: function(){
           return { voiceSessionId: voiceSessionId,
             providerCallId: voiceControlSocket ? new URL(voiceControlSocket.url).searchParams.get('call_id') : null };
@@ -5296,3 +5339,4 @@ function safeQuickMenuPageTarget(value, origin) {
 
   updatePrimaryControlState();
 })();
+
