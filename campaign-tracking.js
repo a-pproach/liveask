@@ -2,12 +2,17 @@
 (function () {
   var query = new URLSearchParams(location.search);
   var ref = query.get('ref');
+  var source = query.get('from');
+  var demoId = query.get('demo');
+  var partnerId = query.get('partner');
   var path = location.pathname.replace(/\/$/, '') || '/';
-  if (!/^[A-Za-z0-9_-]{1,40}$/.test(ref || '') || !['/', '/demo'].includes(path)) return;
+  var trackADemo = source === 'demo' && /^[A-Za-z0-9_-]{3,80}$/.test(demoId || '') && /^[A-Za-z0-9_-]{3,80}$/.test(partnerId || '');
+  if (!trackADemo && !/^[A-Za-z0-9_-]{1,40}$/.test(ref || '')) return;
+  if (!['/', '/demo'].includes(path)) return;
   // Tour opening is already recorded by its authoritative backend event.
   if (query.has('tour') || query.get('tour-entry') === '1') return;
   if (navigator.globalPrivacyControl || navigator.doNotTrack === '1') return;
-  var key = 'liveask_campaign_visit:' + path + ':' + ref;
+  var key = 'liveask_campaign_visit:' + path + ':' + (trackADemo ? ['demo', demoId, partnerId].join(':') : ref);
   var state;
   try { state = JSON.parse(sessionStorage.getItem(key) || 'null'); } catch (_) {}
   if (state && state.sent) return;
@@ -16,7 +21,9 @@
   fetch('https://ask-liveask.chriscarroll-promptworkx.workers.dev/campaign/visit', {
     method: 'POST', credentials: 'omit', keepalive: true,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ref: ref, landingPath: path, visitId: state.visitId })
+    body: JSON.stringify(trackADemo
+      ? { ref: 'demo', source: 'demo', demoId: demoId, partnerId: partnerId, landingPath: path, visitId: state.visitId }
+      : { ref: ref, landingPath: path, visitId: state.visitId })
   }).then(function (response) {
     if (!response.ok) return;
     state.sent = true;
