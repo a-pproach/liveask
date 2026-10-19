@@ -2086,7 +2086,7 @@
     p.className = 'ask-privacynotice';
     p.appendChild(document.createTextNode("We'll use the details you provide to respond to your enquiry. Please don't share sensitive information. "));
     const link = document.createElement('a');
-    link.href = '/privacy-index.html';
+    link.href = '/privacy.html';
     link.textContent = 'Privacy';
     p.appendChild(link);
     return p;
@@ -2536,7 +2536,7 @@
           collectionNotice.className = 'ask-privacynotice';
           collectionNotice.appendChild(document.createTextNode(data.supportingText.trim() + ' '));
           const privacyLink = document.createElement('a');
-          privacyLink.href = '/privacy-index.html';
+          privacyLink.href = '/privacy.html';
           privacyLink.textContent = 'Privacy';
           collectionNotice.appendChild(privacyLink);
           a.appendChild(collectionNotice);
