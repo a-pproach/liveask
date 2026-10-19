@@ -2531,6 +2531,16 @@
           a.insertBefore(buildPrivacyNoticeEl(), replyP);
         }
         replyP.textContent = replyText;
+        if (data.collectionPrivacy === true && typeof data.supportingText === 'string' && data.supportingText.trim()) {
+          const collectionNotice = document.createElement('p');
+          collectionNotice.className = 'ask-privacynotice';
+          collectionNotice.appendChild(document.createTextNode(data.supportingText.trim() + ' '));
+          const privacyLink = document.createElement('a');
+          privacyLink.href = '/privacy-index.html';
+          privacyLink.textContent = 'Privacy';
+          collectionNotice.appendChild(privacyLink);
+          a.appendChild(collectionNotice);
+        }
         const quickReplyChoices = validQuickReplies(data);
         renderRow2(quickReplyChoices);
         if (replyText) thread.appendChild(a);

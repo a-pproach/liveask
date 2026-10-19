@@ -8,9 +8,7 @@
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/inter.css">
 <style>
   :root {
     --liveask-blue: #005FAF;
@@ -125,6 +123,12 @@
     main h1 { font-size: 24px; }
     main { padding: 36px 20px 64px; }
   }
+
+/* Add to the shared stylesheet used by the public legal pages (privacy.html) */
+main table { width: 100%; border-collapse: collapse; margin: 0 0 18px; font-size: 14px; }
+main th, main td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--hairline); color: var(--liveask-charcoal); }
+main th { color: var(--ink); font-weight: 700; }
+.table-wrap { overflow-x: auto; }
 </style>
 </head>
 <body>
@@ -138,105 +142,159 @@
 
 <main>
 <h1>LiveAsk Privacy Policy</h1>
-<p><strong>Effective date: 21 August 2026</strong></p>
-<p>LiveAsk respects the privacy of people who visit our website, use LiveAsk, or contact us about our services.</p>
-<p>This Privacy Policy explains how information may be collected, used, stored and disclosed when you interact with the LiveAsk website and LiveAsk.</p>
-<h2>1. About LiveAsk</h2>
-<p>LiveAsk is an AI-powered website interaction and enquiry system.</p>
-<p>LiveAsk uses artificial intelligence to answer visitor questions and may assist visitors to identify an appropriate next step and, where configured, provide enquiry or contact information.</p>
-<h2>2. Information we may collect</h2>
-<p>Depending on how you use the website or LiveAsk, information we receive may include:</p>
+<p><strong>Effective date: 19 October 2026</strong></p>
+<p>LiveAsk respects the privacy of people who visit our website, use LiveAsk, try a LiveAsk demonstration, or deal with us as a customer or Partner.</p>
+<p>This Privacy Policy explains how information may be collected, used, stored and disclosed when you interact with the LiveAsk website, LiveAsk conversations and demonstrations, or our services.</p>
+
+<h2>1. Who we are</h2>
+<p>LiveAsk is operated by Christopher David Carroll (ABN 81 716 061 314) trading as LiveAsk, in Queensland, Australia.</p>
+<p>LiveAsk is an AI-powered website interaction and enquiry system. It uses artificial intelligence to answer visitor questions by text or voice and may help visitors identify a next step and, where configured, make an enquiry or contact request. You are talking to an AI, not a person, unless you are connected to a live call.</p>
+<p>To contact us about privacy, see section 17.</p>
+
+<h2>2. Whose information this covers</h2>
 <ul>
-<li>information you type into a LiveAsk conversation;</li>
-<li>your name;</li>
-<li>phone number;</li>
-<li>email address;</li>
-<li>business or organisation name, where you choose to mention it in</li>
+<li><strong>Visitors</strong> to the LiveAsk website and to websites that use LiveAsk.</li>
+<li><strong>People who try a demonstration</strong>, including a person for whom a demonstration was prepared.</li>
+<li><strong>Customers and Partners</strong> who buy or sell LiveAsk services, and their contacts.</li>
 </ul>
-<p>conversation;</p>
+<p><strong>Websites that use LiveAsk.</strong> When a business uses LiveAsk on its own website, LiveAsk handles visitor information on that business's behalf and passes enquiries to it. That business decides what to do with an enquiry it receives and is responsible for its own use of that information, including its own privacy notice.</p>
+
+<h2>3. Information we may collect</h2>
+<p>Depending on how you use the website, LiveAsk or a demonstration, information we receive may include:</p>
 <ul>
-<li>the nature of your enquiry or service interest;</li>
-<li>contact preferences or requested contact times;</li>
-<li>information required to verify a phone number by SMS;</li>
-<li>technical or session information required to operate and secure the</li>
+<li>what you type into a LiveAsk conversation;</li>
+<li>what you say in a LiveAsk voice conversation, which is processed live and not kept as audio (see section 5), and the text transcript of it;</li>
+<li>your name, phone number and email address;</li>
+<li>the business or organisation you mention, the nature of your enquiry or service interest, and contact preferences or requested contact times;</li>
+<li>verification codes and the records needed to check them;</li>
+<li>technical and session information needed to operate and secure the service, such as a random session identifier, the page you were on and limited request details;</li>
+<li>for customers and Partners, billing contacts, order and payment references, and settlement details; and</li>
+<li>anything else you choose to give us.</li>
 </ul>
-<p>service; and</p>
+<p>Please do not give sensitive personal information through LiveAsk unless it is genuinely necessary for your enquiry.</p>
+
+<h2>4. LiveAsk conversations (text)</h2>
+<p>Text conversations are processed by LiveAsk systems and sent to third-party providers needed to produce a response, currently Anthropic as our AI model provider for text answers. If we change providers, this policy will be updated.</p>
+<p>Conversation history may be sent to the provider during a session so that LiveAsk can keep the conversation in context.</p>
+<p>Conversation records, including transcripts, are kept for 90 days and then deleted automatically. LiveAsk's operator may also receive copies of conversations by email for monitoring, quality and safety, and keeps those copies for as long as needed for those purposes.</p>
+<p>When a conversation becomes an enquiry or lead, what the visitor supplied and the conversation transcript may be included in a notification email to the recipient named in section 8.</p>
+<p>AI-generated responses can be imperfect. Please do not rely on LiveAsk as a substitute for professional, legal, financial, medical or other specialist advice.</p>
+
+<h2>5. Voice conversations</h2>
+<p>When you choose voice, your speech is streamed in real time to OpenAI, our AI voice provider, which produces the spoken reply. LiveAsk does not save audio or create an audio recording. The final transcript of the voice interaction is added to the ordinary conversation record and kept for 90 days.</p>
+<p>OpenAI may keep standard abuse-monitoring logs for up to 30 days. Under its commercial API terms, OpenAI does not use API content to train its models unless the customer opts in, and LiveAsk has not opted in.</p>
+
+<h2>6. Live calls with a person</h2>
+<p>A live call connects you with a person, not an AI. Live calls are not recorded and are not transcribed, and LiveAsk's AI does not listen to them.</p>
+<p>Calls ordinarily use an encrypted direct connection between your device and the other person's device. Where a direct connection cannot be made, encrypted media may be relayed through Cloudflare's global network. A relay carries the encrypted call but cannot read it, and it sees connection details such as IP addresses, timing and traffic volume.</p>
+<p>LiveAsk keeps basic call records for 90 days: that a call was offered and answered, the outcome, start and end times, duration and whether the connection was direct or relayed. The temporary call room itself expires after two hours.</p>
+
+<h2>7. Phone and email verification</h2>
+<p>To reduce false or mistyped contact details, LiveAsk may ask you to verify a phone number or email address with a code.</p>
+<p>A phone number is sent to our SMS verification provider, currently Twilio, which may keep the destination phone number for up to 30 days. Email codes and other emails are sent through our email provider, currently Resend, which keeps email content and logs for 30 days.</p>
+<p>LiveAsk's own pending verification records expire within minutes: 20 minutes for a phone code and 30 minutes for an email code.</p>
+<p>If you give a phone number or email address as part of an enquiry, LiveAsk may use it to verify your details and to arrange the contact you asked for. LiveAsk does not currently use contact details collected through LiveAsk for unrelated marketing.</p>
+
+<h2>8. Who receives your information</h2>
 <ul>
-<li>information you otherwise choose to provide to LiveAsk.</li>
+<li><strong>On a website that uses LiveAsk:</strong> the business that runs that website receives your enquiry, your verified contact details and the conversation transcript, so it can follow up.</li>
+<li><strong>On a demonstration:</strong> the email address you verify as the owner receives the sample lead and any call link. If a Partner or LiveAsk has set a recipient for the demonstration, it goes to that recipient.</li>
+<li><strong>LiveAsk's operator</strong>, who may receive copies of conversations by email for monitoring, quality and safety.</li>
+<li><strong>Our service providers</strong>, as described in section 11.</li>
+<li><strong>Authorities or others</strong> where the law requires or permits.</li>
 </ul>
-<p>Please do not provide sensitive personal information through LiveAsk unless it is genuinely necessary for your enquiry.</p>
-<h2>3. LiveAsk conversations</h2>
-<p>LiveAsk uses AI to respond to questions.</p>
-<p>Conversation content is processed by LiveAsk systems and may be transmitted to third-party technology providers required to provide the service, including Anthropic, our current AI model/API provider.</p>
-<p>LiveAsk conversation records may be retained where reasonably required for service delivery, enquiry and customer history, quality assurance, troubleshooting, security, reporting, analytics and service improvement.</p>
-<p>When a conversation becomes a business enquiry or lead, information supplied by the visitor and the conversation transcript may also be included in a lead-notification email so the enquiry can be understood and followed up.</p>
-<h2>4. AI processing</h2>
-<p>Information entered into LiveAsk may be sent to <strong>Anthropic, our current AI model/API provider</strong>, in order to generate a response.</p>
-<p>Conversation history may be supplied to Anthropic during a session where required to maintain conversational context. If LiveAsk changes AI providers, this policy will be updated to reflect the provider then in use.</p>
-<p>AI-generated responses can be imperfect. Visitors should not rely on LiveAsk as a substitute for professional, legal, financial, medical or other specialist advice.</p>
-<h2>5. Phone verification and contact</h2>
-<p>Where LiveAsk asks a visitor to verify a phone number, the phone number may be sent to our SMS/verification service provider, currently Twilio, for verification.</p>
-<p>The verification process is used to reduce false or mistyped contact details and improve the integrity of enquiries.</p>
-<p>If you voluntarily provide a phone number as part of an enquiry or request for contact, LiveAsk may use that number to verify the contact information and to facilitate the contact you requested. LiveAsk does not currently use phone numbers collected through LiveAsk for unrelated SMS or telephone marketing.</p>
-<h2>6. Email and enquiry handling</h2>
-<p>When a visitor asks to be contacted or otherwise becomes a lead, relevant information may be sent using our email service provider, currently Resend.</p>
-<p>At present, a lead notification may include the visitor's contact details and the full LiveAsk conversation transcript.</p>
-<p>Information received through an enquiry may subsequently be retained as a business record where reasonably required to respond to the enquiry, manage a customer relationship, resolve a dispute, maintain appropriate records or meet legal obligations.</p>
-<h2>7. Service providers</h2>
-<p>LiveAsk uses third-party infrastructure and technology providers to operate its services. Depending on the interaction, information may be processed by providers including:</p>
+<p>We do not sell personal information.</p>
+
+<h2>9. Demonstrations</h2>
+<p>A LiveAsk demonstration is prepared by LiveAsk or by one of its Partners for a particular business. It is built mainly from information that business has published on its own website, together with details the preparer supplies. A business that did not ask for a demonstration can ask us to remove it (section 17).</p>
+<p>A demonstration may include a recipient (name, email and optionally a mobile number) entered by the person who prepared it, who must have that person's consent. That recipient stays with the demonstration until it is edited or deleted.</p>
+<p>Demonstration access links expire after 7 days. Details you enter during a demonstration session are held for that session and are not added to the demonstration's configuration.</p>
+<p>Each demonstration page links back to LiveAsk. Following that link carries the demonstration and Partner identifiers described in section 12.</p>
+
+<h2>10. Customers and Partners</h2>
+<p>If you buy or sell LiveAsk services, we collect your contact and billing details, order and payment references, Partner settlement details and records of the terms you accepted. Where you pay by card through Stripe, Stripe handles the card details and LiveAsk does not receive your full card number. We keep these records as long as needed for accounts, tax, disputes and legal obligations.</p>
+
+<h2>11. Service providers and overseas processing</h2>
+<p>LiveAsk uses third-party providers to operate its services. Depending on the interaction, information may be processed by:</p>
 <ul>
-<li>Cloudflare &mdash; website, application and storage infrastructure;</li>
-<li>Anthropic &mdash; current AI model/API provider used by LiveAsk to</li>
+<li>Cloudflare, for website, application, storage and (where used) call relay infrastructure;</li>
+<li>Anthropic, for text answers;</li>
+<li>OpenAI, for voice;</li>
+<li>Twilio, for phone verification;</li>
+<li>Resend, for email delivery (provider data stored in the United States);</li>
+<li>Stripe, where you pay for a LiveAsk service;</li>
+<li>browser and device push-notification services, where a LiveAsk Exec user turns on notifications. These alerts are encrypted and show only generic text by default, such as that a visitor wants to speak.</li>
 </ul>
-<p>generate conversational responses;</p>
+<p>Those providers run their own systems and privacy practices. Many are based or operate in the United States or elsewhere overseas, and some process data on a global network. We have not restricted our storage to a particular country, so information may be processed or stored in Australia and overseas. We do not promise that any information stays in Australia.</p>
+<p>Anthropic says it ordinarily deletes commercial API inputs and outputs within 30 days and does not use them to train its models unless the customer permits it. LiveAsk has not given that permission.</p>
+
+<h2>12. Cookies and browser storage</h2>
+<p>LiveAsk uses essential first-party cookies and browser storage to run conversations, demonstrations, signed-in services, live calls and the installed web app. We do not use advertising cookies, advertising pixels or third-party advertising tracking, and we do not use these technologies for cross-site tracking.</p>
+<div class="table-wrap">
+<table>
+<tr><th>Technology</th><th>What it is used for</th><th>How long</th></tr>
+<tr><td>Essential cookies</td><td>Sign-in for LiveAsk Exec (the app used by businesses to take calls) and for the Founder Console; demonstration access and invitations; short-lived security and recovery steps. Demonstration credentials are held in secure cookies that page scripts cannot read.</td><td>Exec: up to 30 days idle, 90 days at most. Console: 12 hours. Recovery: 10 minutes. Demonstration access: up to 7 days.</td></tr>
+<tr><td>Session storage (per browser tab)</td><td>A random session identifier; the current conversation, including text and voice transcripts; guided-tour and demonstration progress; temporary voice authority; pending page actions; avoiding double-counting of demonstration visits.</td><td>Until the tab or browser session ends. Some browsers can restore it after a crash.</td></tr>
+<tr><td>Local storage</td><td>LiveAsk Exec only: a device identifier, and optional technical call diagnostics (status only, never audio) when switched on. The ordinary visitor widget does not use it for tracking.</td><td>Device identifier: until app or browser storage is cleared. Diagnostics: 24 hours.</td></tr>
+<tr><td>Cache storage</td><td>The installed LiveAsk Exec app keeps its own files so it loads reliably.</td><td>Until the app or browser storage is cleared.</td></tr>
+<tr><td>Cloudflare security cookies</td><td>Cloudflare may set a short-lived security-verification cookie for traffic its protection flags as suspicious. Ordinary visitors would not usually see one.</td><td>Short-lived.</td></tr>
+</table>
+</div>
+<p><strong>Demonstration and Partner attribution.</strong> A link from a LiveAsk demonstration to liveask.au carries a demonstration identifier and a Partner identifier. We use them to measure which demonstration or Partner brought a visitor, and to credit a Partner who introduced a customer. Each visit is recorded on our servers for 90 days with the source, the identifiers, the page landed on, a random visit identifier, broad device, browser and operating-system categories, and approximate country and region derived from network information. LiveAsk does not store the IP address, the full browser user-agent, the query string or anything the visitor types in this record. It is first-party measurement, not advertising. If your browser sends a Global Privacy Control or Do Not Track signal, the visit is not recorded.</p>
+<p>If we add other cookies or tracking, this policy and any required notice will be updated first.</p>
+
+<h2>13. Why we use information</h2>
+<p>We use information to:</p>
 <ul>
-<li>Twilio &mdash; phone/SMS verification;</li>
-<li>Resend &mdash; transmission of enquiry and lead notification emails; and</li>
-<li>Google Fonts &mdash; loads typefaces used on the website. As with any</li>
+<li>run LiveAsk and answer visitor questions by text or voice;</li>
+<li>connect live calls;</li>
+<li>verify contact details and deliver enquiries and requested copies of conversations;</li>
+<li>send sample leads and call links in demonstrations;</li>
+<li>prevent fraud, abuse and misuse, and keep the platform secure;</li>
+<li>troubleshoot problems and keep the service reliable;</li>
+<li>monitor conversations for quality, safety and service improvement;</li>
+<li>meter usage and costs;</li>
+<li>measure demonstration and Partner attribution;</li>
+<li>run our customer and Partner relationships, including billing and settlement;</li>
+<li>carry out service administration and aggregate operational analysis; and</li>
+<li>comply with legal obligations.</li>
 </ul>
-<p>font request of this kind, your device's IP address is sent to Google's servers as part of loading the page; LiveAsk does not otherwise share information with Google through this feature.</p>
-<p>Those providers operate their own systems and privacy practices. LiveAsk seeks to use reputable providers appropriate to the services being supplied.</p>
-<h2>8. Cookies and browser tracking</h2>
-<p>At the effective date of this policy, the LiveAsk website does <strong>not</strong> use conventional advertising or analytics cookies, browser localStorage/sessionStorage, advertising pixels, or comparable visitor-tracking technologies.</p>
-<p>The website does load fonts from Google Fonts (see Section 7), which involves a standard third-party server request but is not a tracking or advertising cookie. Our infrastructure provider, Cloudflare, may also automatically issue a short-lived security-verification cookie to visitors whose traffic its automated protection flags as suspicious; this is a security mechanism, not tracking or advertising, and is not something ordinary visitors would encounter.</p>
-<p>If that changes, this Privacy Policy and any required visitor notices or consent mechanisms will be updated accordingly.</p>
-<h2>9. Why we use information</h2>
-<p>We may use information to:</p>
-<ul>
-<li>operate LiveAsk and answer visitor questions;</li>
-<li>respond to enquiries;</li>
-<li>verify contact information;</li>
-<li>arrange requested contact;</li>
-<li>provide and improve LiveAsk services;</li>
-<li>troubleshoot and investigate technical problems;</li>
-<li>assess service quality and conversation performance;</li>
-<li>understand recurring visitor questions and needs;</li>
-<li>maintain security and platform integrity;</li>
-<li>manage customer and business relationships; and</li>
-<li>comply with applicable legal obligations.</li>
-</ul>
-<h2>10. Conversation history, analytics and retention</h2>
-<p>LiveAsk considers conversation history valuable for purposes including customer and enquiry history, service quality, reporting, troubleshooting, analytics, security and service improvement.</p>
-<p>LiveAsk conversation records may be retained where reasonably required for those purposes.</p>
-<p>LiveAsk periodically reviews its data-management and retention practices as the service develops. We do not intend to retain identifiable personal information for longer than reasonably required for the purposes for which it is held, or as otherwise required or permitted by law.</p>
-<p>Where information can appropriately be aggregated or de-identified for longer-term analytics and service improvement, it may be handled separately from identifiable conversation records.</p>
-<h2>11. Access, correction and deletion requests</h2>
-<p>You may contact LiveAsk if you want to ask about personal information we hold about you, request correction of inaccurate information, or request deletion of information where appropriate.</p>
-<p>LiveAsk may need enough information to identify the relevant record and verify that a request relates to the person making it.</p>
-<p>A request to delete a conversation does not necessarily require deletion of a minimal administrative record showing that the privacy request itself was received and handled where keeping such a record is reasonably required.</p>
-<h2>12. Security</h2>
-<p>LiveAsk takes reasonable steps to protect information within the systems it operates. No internet service can guarantee absolute security.</p>
-<p>If LiveAsk becomes aware of a material privacy or security issue, it will assess and respond to it according to applicable obligations and the circumstances.</p>
-<h2>13. Overseas processing</h2>
-<p>Some technology providers used to operate LiveAsk may process or store information outside Australia.</p>
-<p>The precise locations and provider arrangements can change over time.</p>
-<h2>14. Third-party websites</h2>
-<p>The LiveAsk website may link to third-party websites and services. LiveAsk does not control the privacy practices of those third parties.</p>
-<h2>15. Changes to this policy</h2>
-<p>LiveAsk may update this Privacy Policy as its data architecture, service providers, legal requirements or business operations evolve.</p>
-<p>The effective date at the top of the policy indicates the current published version.</p>
-<h2>16. Contact</h2>
-<p>For privacy questions, access or correction requests, or deletion requests, contact LiveAsk using the contact details published on the LiveAsk website.</p>
+<p>We do not use visitor information for advertising profiles or cross-site advertising, and we do not train our own AI models on it. We have not agreed to our providers using it to train their models.</p>
+
+<h2>14. How long we keep information</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Information</th><th>How long</th></tr>
+<tr><td>Conversation messages and transcripts, including voice transcripts</td><td>90 days, then deleted automatically</td></tr>
+<tr><td>Copies of conversations emailed to LiveAsk's operator for monitoring</td><td>Kept while needed for monitoring, quality and safety</td></tr>
+<tr><td>Voice audio</td><td>Not kept by LiveAsk</td></tr>
+<tr><td>Live call audio</td><td>Never recorded</td></tr>
+<tr><td>Live call records (no audio)</td><td>90 days</td></tr>
+<tr><td>Temporary call room</td><td>Up to 2 hours</td></tr>
+<tr><td>Verified phone or email attached to an enquiry; lead and email delivery records</td><td>90 days</td></tr>
+<tr><td>Pending lead, and pending phone or email verification</td><td>2 hours; 20 minutes; 30 minutes</td></tr>
+<tr><td>Emails and email logs held by our email provider</td><td>30 days</td></tr>
+<tr><td>Demonstration attribution visits</td><td>90 days</td></tr>
+<tr><td>Demonstration access links</td><td>7 days</td></tr>
+<tr><td>Demonstration set-up, website content gathered for a demonstration, and any demonstration recipient</td><td>Kept while required, or until the demonstration is deleted</td></tr>
+<tr><td>Customer and Partner records, Founder Console records and usage-metering records</td><td>Kept while required, or until deleted, and as the law requires for accounts and tax</td></tr>
+</table>
+</div>
+<p>We review these periods as the service develops and do not intend to keep identifiable personal information longer than reasonably required, or as the law requires or permits. Where information can be aggregated or de-identified for longer-term analysis, it may be handled separately.</p>
+
+<h2>15. Access, correction and deletion</h2>
+<p>You can ask us what personal information we hold about you, ask us to correct it, or ask us to delete it where appropriate. We may need enough detail to find the record and to check the request is yours. We aim to respond within 30 days.</p>
+<p>A request to delete a conversation does not necessarily require deletion of a minimal administrative record that the request was received and handled, where keeping that record is reasonably required.</p>
+<p>Where LiveAsk handled your information for a business whose website you used, that business may also hold it and you may need to ask the business as well.</p>
+
+<h2>16. Security, complaints and changes</h2>
+<p><strong>Security.</strong> LiveAsk takes reasonable steps to protect information in the systems it operates. No internet service can guarantee absolute security. If we become aware of a material privacy or security issue, we will assess and respond to it according to our obligations and the circumstances.</p>
+<p><strong>Complaints.</strong> If you are unhappy with how we have handled your information, contact us first (section 17) and we will look into it. If you are not satisfied, you may contact the Office of the Australian Information Commissioner at oaic.gov.au.</p>
+<p><strong>Third-party websites.</strong> The LiveAsk website may link to other websites. We do not control their privacy practices.</p>
+<p><strong>Changes.</strong> We may update this policy as our service, providers and legal requirements change. The effective date at the top shows the current version.</p>
+
+<h2>17. Contact</h2>
+<p>For privacy questions, access, correction or deletion requests, complaints, or to ask us to remove a demonstration prepared for your business, email privacy@liveask.au.</p>
 </main>
 
 <footer class="legal-footer">&copy; 2026 LiveAsk</footer>
