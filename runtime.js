@@ -330,6 +330,35 @@
   askPanel.querySelector('.ask-input-row').appendChild(handoffTimer);
   let inputInstructionAttentionTimer = null;
   let voicePromptEnabled = false;
+  let voiceStartupAttemptId = null;
+  let voiceStartupTiming = [];
+  const voiceStartupSent = new Set();
+  function voiceStartupStamp(name, details){
+    const now = Date.now();
+    const monotonic = performance.now();
+    const mark = { name: name, absoluteMs: now, monotonicMs: monotonic, clockOriginMs: now - monotonic, details: details || {} };
+    voiceStartupTiming.push(mark);
+    try { sessionStorage.setItem('liveask_voice_startup_last', JSON.stringify({ attemptId: voiceStartupAttemptId, events: voiceStartupTiming })); } catch (e) {}
+    if (voiceControlSocket && voiceControlSocket.readyState === 1 && !voiceStartupSent.has(name)) {
+      voiceStartupSent.add(name);
+      voiceControlSocket.send(JSON.stringify({ type: 'voice.startup.timing', event: mark }));
+    }
+    return mark;
+  }
+  function beginVoiceStartupTiming(){
+    voiceStartupAttemptId = 'vst_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+    voiceStartupTiming = [];
+    voiceStartupSent.clear();
+    voiceStartupStamp('voice_tap');
+  }
+  function flushVoiceStartupTiming(){
+    if (!voiceControlSocket || voiceControlSocket.readyState !== 1) return;
+    voiceStartupTiming.forEach(function(mark){
+      if (voiceStartupSent.has(mark.name)) return;
+      voiceStartupSent.add(mark.name);
+      voiceControlSocket.send(JSON.stringify({ type: 'voice.startup.timing', event: mark }));
+    });
+  }
   let voicePromptButton = null;
   let voiceUnavailableForSession = false;
   let voiceUnavailableNoticeShown = false;
@@ -4335,6 +4364,7 @@
     tourContactVoiceGuiding = false;
     contactSignoffResponseId = null;
     voicePromptEnabled = false;
+    voiceStartupAttemptId = null;
     renderVoicePromptControl();
     voiceEnding = false;
     setVoiceUi('idle');
@@ -4589,6 +4619,7 @@
     options = options || {};
     if (handoffHumanActive) { renderVoiceNotice('You are in a human call. End it before starting AI Voice.'); return; }
     if (voiceMode !== 'idle') return;
+    beginVoiceStartupTiming();
     if (tourAuthoringActive) {
       renderVoiceNotice('Voice conversation is paused while you create this Tour. Dictate is still available.');
       return;
@@ -4617,6 +4648,7 @@
       await ensureVoiceAuthority(voiceStartAbort.signal);
       if (generation !== voiceGeneration) return;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStartupStamp('mic_permission_result', { granted: true });
       if (generation !== voiceGeneration) { stream.getTracks().forEach(function(track){ track.stop(); }); return; }
       voiceLocalStream = stream;
       voiceMuted = true;
@@ -4632,6 +4664,10 @@
       voiceRemoteAudio = audio;
       peer.ontrack = function(event){
         audio.srcObject = event.streams[0];
+        audio.addEventListener('playing', function onFirstPlaying(){
+          audio.removeEventListener('playing', onFirstPlaying);
+          voiceStartupStamp('first_audio_frame_received');
+        });
         const play = audio.play();
         if (play && play.catch) play.catch(function(){});
       };
@@ -4639,6 +4675,7 @@
 
       const channel = peer.createDataChannel('oai-events');
       voiceDataChannel = channel;
+      channel.addEventListener('open', function(){ voiceStartupStamp('data_channel_open'); });
       const promptInstruction = options.instruction && options.instruction.label
         ? {
             kind: options.instruction.kind,
@@ -4655,6 +4692,7 @@
         }
         if (providerEvent.type === 'output_audio_buffer.started') setVoiceUi('speaking', 'Speaking…');
         if (providerEvent.type === 'output_audio_buffer.stopped') {
+          if (typeof voiceStartupStamp === 'function') voiceStartupStamp('narration_or_greeting_finished');
           flushAssistantVoiceTranscript(providerEvent.response_id || (providerEvent.response && providerEvent.response.id));
           if (contactSignoffResponseId && providerEvent.response_id === contactSignoffResponseId) {
             finishVoice({ force: true, showEnding: false });
@@ -4666,6 +4704,7 @@
       });
 
       peer.addEventListener('connectionstatechange', function(){
+        if (peer.connectionState === 'connected') voiceStartupStamp('peer_connection_open');
         if (peer !== voicePeer || voiceEnding) return;
         if (peer.connectionState === 'failed' || peer.connectionState === 'closed') {
           finishVoice({ force: true, voiceUnavailable: true, notice: 'Voice connection ended. Text is still ready here.' });
@@ -4674,6 +4713,8 @@
 
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
+      voiceStartupStamp('offer_created');
+      voiceStartupStamp('offer_sent');
       const response = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -4684,11 +4725,14 @@
           sdpOffer: peer.localDescription.sdp,
           textHistory: conversationHistory,
           canonicalHistory: conversationHistory,
+          startupAttemptId: voiceStartupAttemptId,
+          browserStartupTiming: voiceStartupTiming,
           structuredInstruction: promptInstruction && (voicePromptEnabled || AUTODEMO_COLLECTION_GUIDE) ? promptInstruction : null
         }),
         signal: voiceStartAbort.signal
       });
       const data = await response.json().catch(function(){ return {}; });
+      voiceStartupStamp('answer_received', { httpStatus: response.status });
       if (!response.ok || !data.ok) throw new Error(data.reason || ('voice_start_http_' + response.status));
       if (generation !== voiceGeneration) {
         voiceSessionId = data.voiceSessionId;
@@ -4697,11 +4741,13 @@
       }
       voiceSessionId = data.voiceSessionId;
       await peer.setRemoteDescription({ type: 'answer', sdp: data.sdpAnswer });
+      voiceStartupStamp('remote_description_applied');
 
       const control = new WebSocket(workerWebSocketUrl(data));
       voiceControlSocket = control;
       control.addEventListener('open', function(){
         if (control !== voiceControlSocket) return;
+        flushVoiceStartupTiming();
         if (pendingVoiceWorkflowSync) {
           control.send(JSON.stringify(pendingVoiceWorkflowSync));
           pendingVoiceWorkflowSync = null;
@@ -4731,6 +4777,7 @@
     } catch (err) {
       if (generation !== voiceGeneration || err.name === 'AbortError') return;
       const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+      if (denied) voiceStartupStamp('mic_permission_result', { granted: false, error: err.name });
       const message = denied ? 'Microphone access was denied. Text is still ready here.' : voiceFailureMessage(err.message);
       await finishVoice({ force: true, voiceUnavailable: true, notice: message });
     } finally {
